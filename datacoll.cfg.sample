@@ -1,0 +1,11 @@
+[Service]
+# Verbosity of the logging system
+# Possible values are:
+# CRITICAL, ERROR, WARNING, INFO, DEBUG
+verbosity = INFO
+
+[mongoDB]
+host = irods.domain.com
+port = 27017
+user = datacoll
+password = datacoll
