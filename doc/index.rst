@@ -51,13 +51,13 @@ To deploy the EIDA Routing Service on an Apache2 web server using `mod_wsgi`:
 #. Extract the package in the desired directory.
    In these instructions we assume this directory is `/var/www/rda/datacoll/`.
 
-   If you downloaded the package from the GEOFON website, unpack the files into
-   the chosen directory. (See Download_ above.)
+   * If you downloaded the package from the GEOFON website, unpack the files into
+     the chosen directory. (See Download_ above.)
 
    * If you want to get the package from Github, use the following commands: ::
 
-    $ cd /var/www/rda/datacoll
-    $ git clone https://github.com/toBeCompleted
+        $ cd /var/www/rda/datacoll
+        $ git clone https://github.com/toBeCompleted
 
 #. Enable `mod_wsgi`. For openSUSE, add 'wsgi' to the list of modules in the
    APACHE_MODULES variable in `/etc/sysconfig/apache2` ::

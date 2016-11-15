@@ -226,9 +226,6 @@ def send_error_response(status, body, start_response):
 
     """
     response_headers = [('Content-Type', 'text/plain')]
-    print response_headers
-    print status
-    print sys.exc_info()
     start_response(status, response_headers, sys.exc_info())
     return [body]
 
