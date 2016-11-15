@@ -27,15 +27,17 @@
 
 
 import os
+import glob
 import cgi
 import json
+import imp
+import logging
 from wsgicomm import WIContentError
 from wsgicomm import WIClientError
 from wsgicomm import WIURIError
 from wsgicomm import WIError
 from wsgicomm import send_plain_response
 from wsgicomm import send_error_response
-import logging
 
 try:
     import configparser
@@ -48,14 +50,21 @@ class DCApp(object):
         self.__action_table = {}
         self.__modules = {}
 
+        # Take this directory as base and import what is on the modules subdir
+        here = os.path.dirname(__file__)
+        for f in glob.glob(os.path.join(here, "modules", "*.py")):
+            self.__load_module(f)
+
     def __load_module(self, path):
         modname = os.path.splitext(os.path.basename(path))[0].replace('.', '_')
+        logging.debug('Importing %s from %s' % (modname, path))
 
         if modname in self.__modules:
             logging.error("'%s' is already loaded!" % modname)
 
         try:
             mod = imp.load_source('__dc_' + modname, path)
+            logging.info("Module '%s' imported!" % modname)
         except:
             logging.error("Error loading '%s'" % modname)
 
@@ -65,6 +74,7 @@ class DCApp(object):
         self.__action_table[name] = func
 
     def getAction(self, name):
+        logging.debug('%s' % self.__action_table)
         return self.__action_table.get(name)
 
 ##################################################################
@@ -111,13 +121,12 @@ def application(environ, start_response):
     here = os.path.dirname(__file__)
     config.read(os.path.join(here, 'datacoll.cfg'))
     verbo = config.get('Service', 'verbosity')
-    # Warning is the default value
+    # 'WARNING' is the default value
     verboNum = getattr(logging, verbo.upper(), 30)
-    logging.info('Verbosity configured with %s' % verboNum)
     logging.basicConfig(level=verboNum)
+    logging.info('Verbosity configured with %s' % verboNum)
 
     fname = environ['PATH_INFO']
-
     logging.debug('fname: %s' % fname)
 
     item = dc.getAction(fname)
@@ -126,7 +135,9 @@ def application(environ, start_response):
     # Among others, this will filter wrong function names,
     # but also the favicon.ico request, for instance.
     if item is None:
-        raise WIClientError('Method name not recognized!')
+        return send_error_response('400 Bad Request',
+                                   'Method name not recognized!',
+                                   start_response)
 
     if len(environ['QUERY_STRING']) > 1000:
         return send_error_response("414 Request URI too large",
@@ -145,7 +156,6 @@ def application(environ, start_response):
     # parameters = {}
     try:
         iterObj = action(environ)
-        # print iterObj
 
         status = '200 OK'
         return send_plain_response(status, iterObj, start_response)
