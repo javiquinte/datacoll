@@ -4,8 +4,9 @@
 # CRITICAL, ERROR, WARNING, INFO, DEBUG
 verbosity = INFO
 
-[mongoDB]
-host = irods.domain.com
-port = 27017
+[mysql]
+host = localhost
 user = datacoll
 password = datacoll
+db = datacoll
+limit = 500
