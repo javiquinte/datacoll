@@ -36,6 +36,7 @@ from wsgicomm import WIClientError
 from wsgicomm import WIURIError
 from wsgicomm import WIError
 from wsgicomm import send_plain_response
+from wsgicomm import send_dynamicfile_response
 from wsgicomm import send_error_response
 import logging
 
@@ -91,7 +92,7 @@ verbo = config.get('Service', 'verbosity')
 # 'WARNING' is the default value
 verboNum = getattr(logging, verbo.upper(), 30)
 logging.basicConfig(level=verboNum)
-logging.error('Verbosity configured with %s' %
+logging.info('Verbosity configured with %s' %
               logging.getLogger().getEffectiveLevel())
 
 dc = DCApp()
@@ -101,9 +102,6 @@ def application(environ, start_response):
     the proper functions.
 
     """
-
-    print logging.getLogger()
-    print logging.getLogger().getEffectiveLevel()
 
     fname = environ['PATH_INFO']
     logging.debug('fname: %s' % fname)
@@ -137,7 +135,10 @@ def application(environ, start_response):
         iterObj = action(environ)
 
         status = '200 OK'
-        return send_plain_response(status, iterObj, start_response)
+        if isinstance(iterObj, basestring):
+            return send_plain_response(status, iterObj, start_response)
+        else:
+            return send_dynamicfile_response(status, iterObj, start_response)
 
     except WIError as w:
         return send_error_response(w.status, w.body, start_response)
