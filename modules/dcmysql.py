@@ -164,4 +164,8 @@ class DC_Module(object):
 
         logging.debug(query)
         cursor.execute(query)
-        return CollJSONIter(cursor)
+
+        if cid is None:
+            return CollJSONIter(cursor)
+        else:
+            return Collection._make(cursor.fetchone()).toJSON()
