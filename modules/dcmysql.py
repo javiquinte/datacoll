@@ -19,11 +19,12 @@
 .. moduleauthor:: Javier Quinteros <javier@gfz-potsdam.de>, GEOFON, GFZ Potsdam
 """
 
-import MySQLdb
-import configparser
+import os
 import logging
 import json
 import datetime
+import configparser
+import MySQLdb
 from collections import namedtuple
 
 class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
@@ -64,6 +65,7 @@ class CollJSONIter(object):
         # 0: Header must be sent; 1: Send 1st collection; 2: Send more items
         # 3: Headers have been closed and StopIteration should be raised
         self.status = 0
+        self.content_type = 'application/json'
 
     def __iter__(self):
         return self
@@ -89,27 +91,22 @@ class CollJSONIter(object):
         coll = Collection._make(reg)
         if self.status == 1:
             # Send first collection
-            return reg.toJSON()
+            return coll.toJSON()
         else:
             # Send a separator and a collection
             return ', %s' % reg.toJSON()
 
 
 class DC_Module(object):
-    def __init__(self, confFile='../datacoll.cfg'):
+    def __init__(self, dc, confFile='../datacoll.cfg'):
         dc.registerAction("/collections", self.collections)
 
         # We keep a copy of it
         self.__dc = dc
 
         config = configparser.RawConfigParser()
-        config.read(confFile)
-
-        # Set logging verbosity
-        verbo = config.get('Service', 'verbosity')
-        # 'WARNING' is the default value
-        verboNum = getattr(logging, verbo.upper(), 30)
-        logging.basicConfig(level=verboNum)
+        here = os.path.dirname(__file__)
+        config.read(os.path.join(here, confFile))
 
         # Read connection parameters
         self.host = config.get('mysql', 'host')
@@ -121,9 +118,8 @@ class DC_Module(object):
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)
 
-    def collections(self):
-        itC = self.getCollections()
-        for c in itC:
+    def collections(self, environ):
+        return self.getCollections()
 
     def getCollections(self, filterOwner=None):
         cursor = self.conn.cursor()
@@ -138,4 +134,4 @@ class DC_Module(object):
 
         logging.debug(query)
         cursor.execute(query)
-        return CollIter(cursor)
+        return CollJSONIter(cursor)
