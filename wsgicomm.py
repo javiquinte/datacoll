@@ -264,9 +264,13 @@ def send_dynamicfile_response(status, body, start_response):
             # ACTUALLY data to send
 
             # Content-length cannot be set because the file size is unknown
-            response_headers = [('Content-Type', body.content_type),
-                                ('Content-Disposition',
-                                 'attachment; filename=%s' % (body.filename))]
+            response_headers = [('Content-Type',
+                                 getattr(body, 'content_type',
+                                         'application/octet-stream'))]
+            if hasattr(body, 'filename'):
+                response_headers.append(('Content-Disposition',
+                                         'attachment; filename=%s' %
+                                         getattr(body, 'filename', 'result')))
             start_response(status, response_headers)
 
         # Increment the loop count
