@@ -31,13 +31,13 @@ import glob
 import cgi
 import json
 import imp
-import logging
 from wsgicomm import WIContentError
 from wsgicomm import WIClientError
 from wsgicomm import WIURIError
 from wsgicomm import WIError
 from wsgicomm import send_plain_response
 from wsgicomm import send_error_response
+import logging
 
 try:
     import configparser
@@ -67,6 +67,7 @@ class DCApp(object):
             logging.info("Module '%s' imported!" % modname)
         except:
             logging.error("Error loading '%s'" % modname)
+            return
 
         self.__modules[modname] = mod.DC_Module(self)
 
@@ -77,39 +78,23 @@ class DCApp(object):
         logging.debug('%s' % self.__action_table)
         return self.__action_table.get(name)
 
-##################################################################
+#####################################################################
 #
-# Initialization of variables
+# Initialization of logging level and the main application variables
 #
-##################################################################
+#####################################################################
+
+config = configparser.RawConfigParser()
+here = os.path.dirname(__file__)
+config.read(os.path.join(here, 'datacoll.cfg'))
+verbo = config.get('Service', 'verbosity')
+# 'WARNING' is the default value
+verboNum = getattr(logging, verbo.upper(), 30)
+logging.basicConfig(level=verboNum)
+logging.error('Verbosity configured with %s' %
+              logging.getLogger().getEffectiveLevel())
 
 dc = DCApp()
-
-# def makeQueryGET(parameters, fullPath=None):
-#     # List all the accepted parameters
-#     allowedParams = ['download']
-#
-#     for param in parameters:
-#         if param not in allowedParams:
-#             msg = 'Unknown parameter: %s' % param
-#             raise WIClientError(msg)
-#
-#     try:
-#         dld = 'download' in parameters
-#     except:
-#         dld = False
-#
-#     if dld:
-#         result = iRODS.getFile(fullPath)
-#     else:
-#         result = json.dumps({'path': fullPath})
-#
-#     logging.debug(result)
-#
-#     if not result:
-#         raise WIContentError()
-#     return result
-
 
 def application(environ, start_response):
     """Main WSGI handler that processes client requests and calls
@@ -117,14 +102,8 @@ def application(environ, start_response):
 
     """
 
-    config = configparser.RawConfigParser()
-    here = os.path.dirname(__file__)
-    config.read(os.path.join(here, 'datacoll.cfg'))
-    verbo = config.get('Service', 'verbosity')
-    # 'WARNING' is the default value
-    verboNum = getattr(logging, verbo.upper(), 30)
-    logging.basicConfig(level=verboNum)
-    logging.info('Verbosity configured with %s' % verboNum)
+    print logging.getLogger()
+    print logging.getLogger().getEffectiveLevel()
 
     fname = environ['PATH_INFO']
     logging.debug('fname: %s' % fname)
