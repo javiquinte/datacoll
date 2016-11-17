@@ -28,7 +28,6 @@
 
 import os
 import glob
-import cgi
 import json
 import imp
 from wsgicomm import WIContentError
@@ -76,8 +75,16 @@ class DCApp(object):
         self.__action_table[name] = func
 
     def getAction(self, name):
-        logging.debug('%s' % self.__action_table)
-        return self.__action_table.get(name)
+        # Important modification: If there is no perfect match a partial match
+        # will be tested
+        try:
+            return self.__action_table[name]
+        except:
+            for k in self.__action_table.keys():
+                if name.startswith(k):
+                    return self.__action_table[k]
+        raise Exception('Action not found!')
+
 
 #####################################################################
 #
@@ -120,13 +127,6 @@ def application(environ, start_response):
         return send_error_response("414 Request URI too large",
                                    "maximum URI length is 1000 characters",
                                    start_response)
-
-    # The keep_blank_values=1 is needed to recognize the download key despite
-    # that it has no value associated (e.g. api/registered/fullpath?download)
-    form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
-                            keep_blank_values=1)
-
-    logging.debug(form.keys())
 
     action = item
     # (action, multipar) = item

@@ -24,6 +24,7 @@ import logging
 import json
 import datetime
 import configparser
+import cgi
 import MySQLdb
 from collections import namedtuple
 
@@ -119,15 +120,44 @@ class DC_Module(object):
                                     self.db)
 
     def collections(self, environ):
-        return self.getCollections()
+        # The keep_blank_values=1 is needed to recognize the download key despite
+        # that it has no value associated (e.g. api/registered/fullpath?download)
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
+                                keep_blank_values=1)
 
-    def getCollections(self, filterOwner=None):
+        logging.debug(form.keys())
+        owner = form.getfirst('filter_by_owner', None)
+
+        splitColl = environ['PATH_INFO'].split('/')
+
+        cid = None
+        for i in range(len(splitColl)):
+            if splitColl[i] == 'collections':
+                try:
+                    if len(splitColl[i+1]):
+                        cid = splitColl[i+1]
+                    else:
+                        raise Exception('Empty collection ID!')
+                except:
+                    pass
+
+        return self.getCollections(filterOwner=owner, cid=cid)
+
+    def getCollections(self, filterOwner=None, cid=None):
         cursor = self.conn.cursor()
         query = 'select id, mail, ts from collection as c inner join user as u'
         query = '%s on c.owner = u.uid' % query
 
+        whereClause = list()
+
         if filterOwner is not None:
-            query = '%s where u.mail = "%s"' % (query, filterOwner)
+            whereClause.append('u.mail = "%s"' % filterOwner)
+
+        if cid is not None:
+            whereClause.append('id = "%s"' % cid)
+
+        if len(whereClause):
+            query = '%s where %s' % (query, ' and '.join(whereClause))
 
         if self.limit:
             query = '%s limit %s' % (query, self.limit)
