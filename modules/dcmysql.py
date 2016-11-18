@@ -28,6 +28,12 @@ import cgi
 import MySQLdb
 from collections import namedtuple
 
+capabilitiesFixed = {'isOrdered': False,
+                     'supportRoles': False,
+                     'membershipIsMutable': False,
+                     'metadataIsMutable': False
+                    }
+
 class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
     """Namedtuple representing a Collection.
 
@@ -43,13 +49,10 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
     __slots__ = ()
 
     def toJSON(self):
+        # FIXME Capabilities should be centralized in the top part of the file
         interVar = ({'id': self.id,
                      'creation': self.ts,
-                     'capabilities': {'isOrdered': False,
-                                      'supportRoles': False,
-                                      'membershipIsMutable': False,
-                                      'metadataIsMutable': False
-                                      },
+                     'capabilities': capabilitiesFixed,
                      'properties': {'ownership': {'owner': (self.mail)},
                                     'license': '',
                                     'hasAccessRestrictions': False,
@@ -125,36 +128,50 @@ class DC_Module(object):
         form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
                                 keep_blank_values=1)
 
-        logging.debug(form.keys())
+        logging.debug('Parameters received: %s' % form.keys())
         owner = form.getfirst('filter_by_owner', None)
 
         splitColl = environ['PATH_INFO'].split('/')
 
-        cid = None
+        cpid = None
+        cpidPos = None
         for i in range(len(splitColl)):
             if splitColl[i] == 'collections':
                 try:
                     if len(splitColl[i+1]):
-                        cid = splitColl[i+1]
+                        cpid = splitColl[i+1]
+                        cpidPos = i+1
+                        break
                     else:
                         raise Exception('Empty collection ID!')
                 except:
                     pass
 
-        return self.getCollections(filterOwner=owner, cid=cid)
+        try:
+            if splitColl[cidPos+1] == 'capabilities':
+                return self.getCapabilities(cpid)
+        except:
+            pass
 
-    def getCollections(self, filterOwner=None, cid=None):
+        return self.getCollections(filterOwner=owner, cpid=cpid)
+
+    def getCapabilities(self, cpid):
+        # For the time being, this are fixed collections.
+        # To be modified in the future with mutable collections
+        return json.dumps(capabilitiesFixed)
+
+    def getCollections(self, filterOwner=None, cpid=None):
         cursor = self.conn.cursor()
-        query = 'select id, mail, ts from collection as c inner join user as u'
-        query = '%s on c.owner = u.uid' % query
+        query = 'select pid, mail, ts from collection as c inner join'
+        query = '%s user as u on c.owner = u.id' % query
 
         whereClause = list()
 
         if filterOwner is not None:
             whereClause.append('u.mail = "%s"' % filterOwner)
 
-        if cid is not None:
-            whereClause.append('id = "%s"' % cid)
+        if cpid is not None:
+            whereClause.append('c.pid = "%s"' % cpid)
 
         if len(whereClause):
             query = '%s where %s' % (query, ' and '.join(whereClause))
@@ -165,7 +182,8 @@ class DC_Module(object):
         logging.debug(query)
         cursor.execute(query)
 
-        if cid is None:
+        if cpid is None:
             return CollJSONIter(cursor)
         else:
+            # FIXME Empty set not considered!
             return Collection._make(cursor.fetchone()).toJSON()
