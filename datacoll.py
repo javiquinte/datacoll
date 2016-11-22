@@ -84,6 +84,8 @@ class DCApp(object):
         for k in self.__action_table.keys():
             # Compare entries in both lists (k:registered and name:given)
             for idx in range(0, len(k)):
+                # print name[idx] if len(name) > idx else '', k[idx], \
+                #    fnmatch.fnmatch(name[idx] if len(name) > idx else '', k[idx])
                 if not fnmatch.fnmatch(name[idx] if len(name) > idx else '',
                                        k[idx]):
                     break

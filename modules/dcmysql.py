@@ -37,7 +37,7 @@ capabilitiesFixed = {'isOrdered': False,
 class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
     """Namedtuple representing a Collection.
 
-    It includes methods to to return the JSON version f the collection.
+    It includes methods to to return the JSON version of the collection.
        id: uuid or pid identifying the collection
        mail: mail address of the owner
        ts: creation of the Collection
@@ -56,16 +56,37 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
                      'properties': {'ownership': {'owner': (self.mail)},
                                     'license': '',
                                     'hasAccessRestrictions': False,
-                                    'memberOf': (),
-                                    'siblings': {'next': {}, 'previous': {}}
+                                    'memberOf': ()
                                     }
                     })
         return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
+class Member(namedtuple('Member', ['id', 'checksum'])):
+    """Namedtuple representing a Member of a Collection.
+
+    It includes methods to to return the JSON version of the member.
+       id: uuid or pid identifying the member.
+       checksum: checksum of the data to check its validity.
+
+    :platform: Any
+
+    """
+
+    __slots__ = ()
+
+    def toJSON(self):
+        # FIXME Capabilities should be centralized in the top part of the file
+        interVar = ({'id': self.id,
+                     'checksum': self.checksum
+                    })
+        return json.dumps(interVar)
+
+
 class CollJSONIter(object):
-    def __init__(self, cursor):
+    def __init__(self, cursor, objType):
         self.cursor = cursor
+        self.objType = objType
         # 0: Header must be sent; 1: Send 1st collection; 2: Send more items
         # 3: Headers have been closed and StopIteration should be raised
         self.status = 0
@@ -92,10 +113,10 @@ class CollJSONIter(object):
             self.status = 3
             return ']}'
 
-        coll = Collection._make(reg)
+        JSONFactory = self.objType._make(reg)
         if self.status == 1:
             # Send first collection
-            return coll.toJSON()
+            return JSONFactory.toJSON()
         else:
             # Send a separator and a collection
             return ', %s' % reg.toJSON()
@@ -139,7 +160,21 @@ class DC_Module(object):
         except:
             cpid = None
 
-        return 'Not implemented'
+        cursor = self.conn.cursor()
+        query = 'select m.pid, m.checksum from member as m inner join'
+        query = '%s collection as c on m.cid = c.id' % query
+
+        whereClause = list()
+        whereClause.append('c.pid = "%s"' % cpid)
+
+        query = '%s where %s' % (query, ' and '.join(whereClause))
+
+        if self.limit:
+            query = '%s limit %s' % (query, self.limit)
+
+        logging.debug(query)
+        cursor.execute(query)
+        return CollJSONIter(cursor, Member)
 
     def collections(self, environ):
         # The keep_blank_values=1 is needed to recognize the download key despite
@@ -157,27 +192,14 @@ class DC_Module(object):
         except:
             cpid = None
 
-        return self.getCollections(cpid=cpid, filterOwner=owner)
-
-    def capabilities(self, environ):
-        # For the time being, this are fixed collections.
-        # To be modified in the future with mutable collections
-        splitColl = environ['PATH_INFO'].split('/')
-        # It should be clear that the first component is "collections" and the
-        # third one is "capabilities". The second is the ID and should br read.
-        # FIXME This is useless for the moment.
-        cid = splitColl[1]
-        return json.dumps(capabilitiesFixed)
-
-    def getCollections(self, cpid=None, filterOwner=None):
         cursor = self.conn.cursor()
         query = 'select pid, mail, ts from collection as c inner join'
         query = '%s user as u on c.owner = u.id' % query
 
         whereClause = list()
 
-        if filterOwner is not None:
-            whereClause.append('u.mail = "%s"' % filterOwner)
+        if owner is not None:
+            whereClause.append('u.mail = "%s"' % owner)
 
         if cpid is not None:
             whereClause.append('c.pid = "%s"' % cpid)
@@ -192,7 +214,17 @@ class DC_Module(object):
         cursor.execute(query)
 
         if cpid is None:
-            return CollJSONIter(cursor)
+            return CollJSONIter(cursor, Collection)
         else:
             # FIXME Empty set not considered!
             return Collection._make(cursor.fetchone()).toJSON()
+
+    def capabilities(self, environ):
+        # For the time being, this are fixed collections.
+        # To be modified in the future with mutable collections
+        splitColl = environ['PATH_INFO'].split('/')
+        # It should be clear that the first component is "collections" and the
+        # third one is "capabilities". The second is the ID and should br read.
+        # FIXME This is useless for the moment.
+        cid = splitColl[1]
+        return json.dumps(capabilitiesFixed)
