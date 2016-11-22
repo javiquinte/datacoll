@@ -27,6 +27,8 @@ import configparser
 import cgi
 import MySQLdb
 from collections import namedtuple
+from wsgicomm import WINotFoundError
+from wsgicomm import WIClientError
 
 # For the time being these are the capabilities for the immutable datasets
 # coming from the user requests.
@@ -233,7 +235,11 @@ class DC_Module(object):
         try:
             prop = splitColl[5]
         except:
-            raise Exception('A name of a property should be given.')
+            messDict = {'code': 0,
+                        'message': 'Malformed request'
+                       }
+            message = json.dumps(messDict)
+            raise WIClientError(message)
 
         # FIXME All parameters MUST be checked to avoid unwanted SQL injection!
         cursor = self.conn.cursor()
@@ -255,10 +261,13 @@ class DC_Module(object):
         try:
             cursor.execute(query)
         except:
-            raise Exception('Empty result set with the given parameters')
+            messDict = {'code': 0,
+                        'message': 'Requested property %s not found' % prop
+                       }
+            message = json.dumps(messDict)
+            raise WINotFoundError(message)
 
         return json.dumps({prop: cursor.fetchone()})
-
 
     def members(self, environ):
         """Return a single collection member or a list of them in JSON format.
@@ -268,6 +277,7 @@ class DC_Module(object):
         :returns: An iterable object with a single collection member or a member
             list in JSON format.
         :rtype: string or :class:`~CollJSONIter`
+        :raise: WINotFoundError
 
         """
 
@@ -310,9 +320,17 @@ class DC_Module(object):
         if mpid is None:
             return CollJSONIter(cursor, Member)
         else:
-            # FIXME Empty set not considered!
-            return Member._make(cursor.fetchone()).toJSON()
+            # Read one member because an ID is given. Check that there is
+            # something to return (result set not empty)
+            member = cursor.fetchone()
+            if member is None:
+                messDict = {'code': 0,
+                            'message': 'Member ID %s or Collection ID %s not found' % (mpid, cpid)
+                           }
+                message = json.dumps(messDict)
+                raise WINotFoundError(message)
 
+            return Member._make(member).toJSON()
 
     def collections(self, environ):
         """Return a single/list of collection(s).
@@ -322,6 +340,7 @@ class DC_Module(object):
         :returns: An iterable object with a single collection or a collection
             list in JSON format.
         :rtype: string or :class:`~CollJSONIter`
+        :raise: WINotFoundError
 
         """
 
@@ -336,6 +355,7 @@ class DC_Module(object):
         splitColl = environ['PATH_INFO'].strip('/').split('/')
 
         try:
+            # Read collection ID
             cpid = splitColl[1]
         except:
             cpid = None
@@ -346,9 +366,11 @@ class DC_Module(object):
 
         whereClause = list()
 
+        # Filter by owner if present in the parameters
         if owner is not None:
             whereClause.append('u.mail = "%s"' % owner)
 
+        # Show only one collection if ID is present
         if cpid is not None:
             whereClause.append('c.pid = "%s"' % cpid)
 
@@ -362,10 +384,20 @@ class DC_Module(object):
         cursor.execute(query)
 
         if cpid is None:
+            # If no ID is given iterate through all collections in cursor
             return CollJSONIter(cursor, Collection)
         else:
-            # FIXME Empty set not considered!
-            return Collection._make(cursor.fetchone()).toJSON()
+            # Read one collection because an ID is given. Check that there is
+            # something to return (result set not empty)
+            coll = cursor.fetchone()
+            if coll is None:
+                messDict = {'code': 0,
+                            'message': 'Collection ID %s not found' % cpid
+                           }
+                message = json.dumps(messDict)
+                raise WINotFoundError(message)
+
+            return Collection._make(coll).toJSON()
 
     def capabilities(self, environ):
         """Return the capabilities of a collection.
@@ -374,14 +406,29 @@ class DC_Module(object):
         :type environ: dict ?
         :returns: The capabilities of a collection in JSON format.
         :rtype: string
+        :raise: WINotFoundError
 
         """
 
         # For the time being, this are fixed collections.
         # To be modified in the future with mutable collections
-        splitColl = environ['PATH_INFO'].split('/')
+        splitColl = environ['PATH_INFO'].strip('/').split('/')
         # It should be clear that the first component is "collections" and the
         # third one is "capabilities". The second is the ID and should br read.
-        # FIXME This is useless for the moment.
-        cid = splitColl[1]
+        cpid = splitColl[1]
+
+        cursor = self.conn.cursor()
+        query = 'select pid from collection where pid = "%s"' % cpid
+
+        logging.debug(query)
+        cursor.execute(query)
+
+        coll = cursor.fetchone()
+        if coll is None:
+            messDict = {'code': 0,
+                        'message': 'Collection ID %s not found' % cpid
+                       }
+            message = json.dumps(messDict)
+            raise WINotFoundError(message)
+
         return json.dumps(capabilitiesFixed)
