@@ -160,12 +160,20 @@ class DC_Module(object):
         except:
             cpid = None
 
+        try:
+            mpid = splitColl[3]
+        except:
+            mpid = None
+
         cursor = self.conn.cursor()
         query = 'select m.pid, m.checksum from member as m inner join'
         query = '%s collection as c on m.cid = c.id' % query
 
         whereClause = list()
         whereClause.append('c.pid = "%s"' % cpid)
+
+        if mpid is not None:
+            whereClause.append('m.pid = "%s"' % mpid)
 
         query = '%s where %s' % (query, ' and '.join(whereClause))
 
@@ -174,7 +182,13 @@ class DC_Module(object):
 
         logging.debug(query)
         cursor.execute(query)
-        return CollJSONIter(cursor, Member)
+
+        if mpid is None:
+            return CollJSONIter(cursor, Member)
+        else:
+            # FIXME Empty set not considered!
+            return Member._make(cursor.fetchone()).toJSON()
+
 
     def collections(self, environ):
         # The keep_blank_values=1 is needed to recognize the download key despite
