@@ -91,6 +91,22 @@ class WIURIError(WIError):
         WIError.__init__(self, "414 Request URI too large", *args, **kwargs)
 
 
+class WINotFoundError(WIError):
+    """Exception to signal that an item was not found (404).
+
+    :platform: Linux
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """WINotFoundError constructor.
+
+        If some parameter is given it will be passed to WIError as body.
+
+        """
+        WIError.__init__(self, "404 Not Found", '', *args, **kwargs)
+
+
 class WIContentError(WIError):
     """Exception to signal that no content was found (204).
 
