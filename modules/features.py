@@ -1,6 +1,17 @@
 import json
 
 class DC_Module(object):
+    """Plugable module for the main :class:`~DCApp` object.
+
+    One method from the Data Collections API are registered.
+
+    :param dc: MySQL cursor containing the result of a query
+    :type dc: :class:`~DCApp`
+
+    :platform: Any
+
+    """
+
     def __init__(self, dc):
         # dc is supposed to be an instance of a DCApp class
         dc.registerAction(("features",), self.features)

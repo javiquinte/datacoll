@@ -28,6 +28,8 @@ import cgi
 import MySQLdb
 from collections import namedtuple
 
+# For the time being these are the capabilities for the immutable datasets
+# coming from the user requests.
 capabilitiesFixed = {'isOrdered': False,
                      'supportRoles': False,
                      'membershipIsMutable': False,
@@ -35,12 +37,12 @@ capabilitiesFixed = {'isOrdered': False,
                     }
 
 class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
-    """Namedtuple representing a Collection.
+    """Namedtuple representing a :class:`~Collection`.
 
-    It includes methods to to return the JSON version of the collection.
+    It includes a method to return its JSON version.
        id: uuid or pid identifying the collection
        mail: mail address of the owner
-       ts: creation of the Collection
+       ts: creation of the collection
 
     :platform: Any
 
@@ -49,7 +51,12 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
     __slots__ = ()
 
     def toJSON(self):
-        # FIXME Capabilities should be centralized in the top part of the file
+        """Return the JSON version of this collection.
+
+        :returns: This collection in JSON format
+        :rtype: string
+        """
+        # FIXME Capabilities should be later separated between (im)mutable
         interVar = ({'id': self.id,
                      'creation': self.ts,
                      'capabilities': capabilitiesFixed,
@@ -63,11 +70,11 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
 
 
 class Member(namedtuple('Member', ['id', 'checksum'])):
-    """Namedtuple representing a Member of a Collection.
+    """Namedtuple representing a :class:`~Member` of a :class:`~Collection`.
 
     It includes methods to to return the JSON version of the member.
-       id: uuid or pid identifying the member.
-       checksum: checksum of the data to check its validity.
+       id: uuid or pid identifying the member
+       checksum: checksum of the data to check its validity
 
     :platform: Any
 
@@ -76,6 +83,11 @@ class Member(namedtuple('Member', ['id', 'checksum'])):
     __slots__ = ()
 
     def toJSON(self):
+        """Return the JSON version of this collection member.
+
+        :returns: This Member in JSON format
+        :rtype: string
+        """
         # FIXME Capabilities should be centralized in the top part of the file
         interVar = ({'id': self.id,
                      'checksum': self.checksum
@@ -84,6 +96,18 @@ class Member(namedtuple('Member', ['id', 'checksum'])):
 
 
 class CollJSONIter(object):
+    """Iterable object capable of creating JSON chunks representing different
+    types of objects. For instance, :class:`~Member` or :class:`~Collection`.
+
+    :param cursor: MySQL cursor containing the result of a query
+    :type cursor: MySQLdb.cursors.Cursor
+    :param objType: Class which must be used to create the objects returned
+    :type objType: type
+
+    :platform: Any
+
+    """
+
     def __init__(self, cursor, objType):
         self.cursor = cursor
         self.objType = objType
@@ -96,6 +120,19 @@ class CollJSONIter(object):
         return self
 
     def next(self):
+        """Return the next object.
+
+        Tuples are read from the cursor and returned in JSON format. A veriable
+        "status" is defined to track in which state are we. Meanings are:
+        0 = Header must be sent ('{"contents": [').
+        1 = Send 1st element.
+        2 = Send the rest of the elements.
+        3 = Headers have been closed and StopIteration should be raised.
+
+        :raises: StopIteration
+
+        """
+
         # Send headers
         if self.status == 0:
             self.status = 1
@@ -123,6 +160,20 @@ class CollJSONIter(object):
 
 
 class DC_Module(object):
+    """Plugable module for the main :class:`~DCApp` object.
+
+    Four methods from the Data Collections API are registered. A connection to
+    the MySQL DB is established as soon as this object is created.
+
+    :param dc: MySQL cursor containing the result of a query
+    :type dc: :class:`~DCApp`
+    :param confFile: File name containing the configuration file to use.
+    :type confFile: string
+
+    :platform: Any
+
+    """
+
     def __init__(self, dc, confFile='../datacoll.cfg'):
         dc.registerAction(("collections",), self.collections)
         dc.registerAction(("collections", "*", "capabilities"),
@@ -149,6 +200,17 @@ class DC_Module(object):
                                     self.db)
 
     def memberProp(self, environ):
+        """Return a property of a collection member.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: Property name and value from a collection member in JSON
+            format.
+        :rtype: string
+        :raises: Exception
+
+        """
+
         # The keep_blank_values=1 is needed to recognize the download key despite
         # that it has no value associated (e.g. api/registered/fullpath?download)
         form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
@@ -198,6 +260,16 @@ class DC_Module(object):
 
 
     def members(self, environ):
+        """Return a single collection member or a list of them in JSON format.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single collection member or a member
+            list in JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+
         # The keep_blank_values=1 is needed to recognize the download key despite
         # that it has no value associated (e.g. api/registered/fullpath?download)
         form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
@@ -242,6 +314,16 @@ class DC_Module(object):
 
 
     def collections(self, environ):
+        """Return a single/list of collection(s).
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single collection or a collection
+            list in JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+
         # The keep_blank_values=1 is needed to recognize the download key despite
         # that it has no value associated (e.g. api/registered/fullpath?download)
         form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
@@ -285,6 +367,15 @@ class DC_Module(object):
             return Collection._make(cursor.fetchone()).toJSON()
 
     def capabilities(self, environ):
+        """Return the capabilities of a collection.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: The capabilities of a collection in JSON format.
+        :rtype: string
+
+        """
+
         # For the time being, this are fixed collections.
         # To be modified in the future with mutable collections
         splitColl = environ['PATH_INFO'].split('/')

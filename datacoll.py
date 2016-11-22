@@ -47,6 +47,13 @@ except ImportError:
 
 
 class DCApp(object):
+    """Object that let other modules register actions and be called when a
+    proper method is triggered from the web client.
+
+    :platform: Any
+
+    """
+
     def __init__(self):
         self.__action_table = {}
         self.__modules = {}
@@ -57,6 +64,9 @@ class DCApp(object):
             self.__load_module(f)
 
     def __load_module(self, path):
+        """Read and import modules with name DC_Module.
+
+        """
         modname = os.path.splitext(os.path.basename(path))[0].replace('.', '_')
         logging.debug('Importing %s from %s' % (modname, path))
 
@@ -73,10 +83,16 @@ class DCApp(object):
         self.__modules[modname] = mod.DC_Module(self)
 
     def registerAction(self, name, func):
+        """Register an action (simil URI path) and associate it with a function.
+
+        """
         # FIXME Check that there are no collissions with existing keys
         self.__action_table[name] = func
 
     def getAction(self, name):
+        """Return a method that can handle the URL provided.
+
+        """
         # Important modification: If there is no perfect match a partial match
         # will be tested
         result = list()
