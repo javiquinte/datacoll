@@ -128,6 +128,8 @@ class DC_Module(object):
         dc.registerAction(("collections", "*", "capabilities"),
                           self.capabilities)
         dc.registerAction(("collections", "*", "members"), self.members)
+        dc.registerAction(("collections", "*", "members", "*", "properties"),
+                          self.memberProp)
 
         # We keep a copy of it
         self.__dc = dc
@@ -145,6 +147,55 @@ class DC_Module(object):
 
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)
+
+    def memberProp(self, environ):
+        # The keep_blank_values=1 is needed to recognize the download key despite
+        # that it has no value associated (e.g. api/registered/fullpath?download)
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
+                                keep_blank_values=1)
+
+        logging.debug('Parameters received: %s' % form.keys())
+        splitColl = environ['PATH_INFO'].strip('/').split('/')
+
+        try:
+            cpid = splitColl[1]
+        except:
+            cpid = None
+
+        try:
+            mpid = splitColl[3]
+        except:
+            mpid = None
+
+        try:
+            prop = splitColl[5]
+        except:
+            raise Exception('A name of a property should be given.')
+
+        # FIXME All parameters MUST be checked to avoid unwanted SQL injection!
+        cursor = self.conn.cursor()
+        query = 'select m.%s from member as m inner join' % prop.lower()
+        query = '%s collection as c on m.cid = c.id' % query
+
+        whereClause = list()
+        whereClause.append('c.pid = "%s"' % cpid)
+
+        if mpid is not None:
+            whereClause.append('m.pid = "%s"' % mpid)
+
+        query = '%s where %s' % (query, ' and '.join(whereClause))
+
+        if self.limit:
+            query = '%s limit %s' % (query, self.limit)
+
+        logging.debug(query)
+        try:
+            cursor.execute(query)
+        except:
+            raise Exception('Empty result set with the given parameters')
+
+        return json.dumps({prop: cursor.fetchone()})
+
 
     def members(self, environ):
         # The keep_blank_values=1 is needed to recognize the download key despite
