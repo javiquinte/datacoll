@@ -152,11 +152,12 @@ class CollJSONIter(object):
 
         JSONFactory = self.objType._make(reg)
         if self.status == 1:
+            self.status = 2
             # Send first collection
             return JSONFactory.toJSON()
         else:
-            # Send a separator and a collection
-            return ', %s' % reg.toJSON()
+            # Status=2 send a separator and a collection
+            return ', %s' % JSONFactory.toJSON()
 
 
 class DC_Module(object):
