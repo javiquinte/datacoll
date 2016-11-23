@@ -210,7 +210,7 @@ class DC_Module(object):
         :returns: Property name and value from a collection member in JSON
             format.
         :rtype: string
-        :raises: Exception
+        :raises: WIClientError, WINotFoundError
 
         """
 
