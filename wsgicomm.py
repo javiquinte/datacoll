@@ -75,6 +75,22 @@ class WIError(Exception):
         return repr(self.status) + ': ' + repr(self.body)
 
 
+class WICreated(WIError):
+    """Exception to signal that an object was successfully created (201).
+
+    :platform: Linux
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """WICreated constructor.
+
+        If some parameter is given it will be passed to WIError as body.
+
+        """
+        WIError.__init__(self, "201 Created", *args, **kwargs)
+
+
 class WIURIError(WIError):
     """Exception to signal that the URI is beyond the allowed limit (414).
 

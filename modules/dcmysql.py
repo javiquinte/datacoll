@@ -29,6 +29,7 @@ import MySQLdb
 from collections import namedtuple
 from wsgicomm import WINotFoundError
 from wsgicomm import WIClientError
+from wsgicomm import WICreated
 
 # For the time being these are the capabilities for the immutable datasets
 # coming from the user requests.
@@ -178,12 +179,12 @@ class DC_Module(object):
     """
 
     def __init__(self, dc, confFile='../datacoll.cfg'):
-        dc.registerAction(("collections",), self.collections)
-        dc.registerAction(("collections", "*", "capabilities"),
-                          self.capabilities)
-        dc.registerAction(("collections", "*", "members"), self.members)
-        dc.registerAction(("collections", "*", "members", "*", "properties"),
-                          self.memberProp)
+        dc.registerAction('GET', ("collections",), self.collections)
+        dc.registerAction('POST', ("collections",), self.collectionsPOST)
+        dc.registerAction('GET', ("collections", "*", "capabilities"), self.capabilities)
+        dc.registerAction('GET', ("collections", "*", "members"), self.members)
+        dc.registerAction('GET', ("collections", "*", "members", "*",
+                                  "properties"), self.memberProp)
 
         # We keep a copy of it
         self.__dc = dc
@@ -267,7 +268,9 @@ class DC_Module(object):
             message = json.dumps(messDict)
             raise WINotFoundError(message)
 
-        return json.dumps({prop: cursor.fetchone()})
+        result = json.dumps({prop: cursor.fetchone()})
+        cursor.close()
+        return result
 
     def members(self, environ):
         """Return a single collection member or a list of them in JSON format.
@@ -323,6 +326,7 @@ class DC_Module(object):
             # Read one member because an ID is given. Check that there is
             # something to return (result set not empty)
             member = cursor.fetchone()
+            cursor.close()
             if member is None:
                 messDict = {'code': 0,
                             'message': 'Member ID %s or Collection ID %s not found' % (mpid, cpid)
@@ -331,6 +335,77 @@ class DC_Module(object):
                 raise WINotFoundError(message)
 
             return Member._make(member).toJSON()
+
+    def collectionsPOST(self, environ):
+        """Create a new collection.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single collection or a collection
+            list in JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+        :raise: WICreated, WIClientError
+
+        """
+
+        form = ''
+        try:
+            length = int(environ.get('CONTENT_LENGTH', '0'))
+        except ValueError:
+            length = 0
+
+        # If there is a body to read
+        if length != 0:
+            form = environ['wsgi.input'].read(length)
+        else:
+            form = environ['wsgi.input'].read()
+
+
+        logging.debug('Text received with request:\n%s' % form)
+
+        jsonColl = json.loads(form)
+
+        # Read only the fields that we support
+        owner = jsonColl['properties']['ownership']['owner'].strip()
+        pid = jsonColl['id'].strip()
+
+        # Insert only if the user does not exist yet
+        cursor = self.conn.cursor()
+        query = 'insert into user (mail) select * from (select "%s") as tmp ' % owner
+        query = '%s where not exists (select id from user where mail="%s") limit 1' % (query, owner)
+        logging.debug(query)
+        cursor.execute(query)
+        self.conn.commit()
+
+        # Read the ID from user
+        query = 'select id from user where mail = "%s"' % owner.strip()
+        logging.debug(query)
+        cursor.execute(query)
+
+        # Read user ID
+        uid = cursor.fetchone()[0]
+
+        query = 'select count(*) from collection where pid = "%s"' % pid
+        logging.debug(query)
+        cursor.execute(query)
+        # FIXME Check the type of numColls!
+        numColls = cursor.fetchone()
+
+        if ((type(numColls) != tuple) or numColls[0]):
+            # Send Error 400
+            messDict = {'code': 0,
+                        'message': 'Collection ID already exists! (%s)' % pid
+                       }
+            message = json.dumps(messDict)
+            cursor.close()
+            raise WIClientError(message)
+
+        query = 'insert into collection (pid, owner) values ("%s", %s)' % (pid, uid)
+        logging.debug(query)
+        cursor.execute(query)
+        self.conn.commit()
+        cursor.close()
+        raise WICreated('Collection %s created' % str(pid))
 
     def collections(self, environ):
         """Return a single/list of collection(s).
@@ -390,6 +465,7 @@ class DC_Module(object):
             # Read one collection because an ID is given. Check that there is
             # something to return (result set not empty)
             coll = cursor.fetchone()
+            cursor.close()
             if coll is None:
                 messDict = {'code': 0,
                             'message': 'Collection ID %s not found' % cpid
@@ -424,6 +500,7 @@ class DC_Module(object):
         cursor.execute(query)
 
         coll = cursor.fetchone()
+        cursor.close()
         if coll is None:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % cpid
