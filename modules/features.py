@@ -14,7 +14,7 @@ class DC_Module(object):
 
     def __init__(self, dc):
         # dc is supposed to be an instance of a DCApp class
-        dc.registerAction(("features",), self.features)
+        dc.registerAction('*', ("features",), self.features)
 
         # We keep a copy of it
         self.__dc = dc

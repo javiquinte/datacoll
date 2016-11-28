@@ -82,14 +82,14 @@ class DCApp(object):
 
         self.__modules[modname] = mod.DC_Module(self)
 
-    def registerAction(self, name, func):
+    def registerAction(self, method, name, func):
         """Register an action (simil URI path) and associate it with a function.
 
         """
         # FIXME Check that there are no collissions with existing keys
-        self.__action_table[name] = func
+        self.__action_table[(method, name)] = func
 
-    def getAction(self, name):
+    def getAction(self, method, name):
         """Return a method that can handle the URL provided.
 
         """
@@ -97,7 +97,10 @@ class DCApp(object):
         # will be tested
         result = list()
 
-        for k in self.__action_table.keys():
+        for met, k in self.__action_table.keys():
+            if not fnmatch.fnmatch(method, met):
+                logging.debug('Dropping %s %s' % (met, k))
+                continue
             # Compare entries in both lists (k:registered and name:given)
             for idx in range(0, len(k)):
                 # print name[idx] if len(name) > idx else '', k[idx], \
@@ -108,12 +111,12 @@ class DCApp(object):
             else:
                 # Register in a list the number of matches and the entry
                 logging.debug('%s matches the method called: %s' % (k, name))
-                result.append((len(k), k))
+                result.append((len(k), met, k))
 
         try:
             # Search for the one with the max number of matches. Get the first
             # one in case that there are more than one (shouldn't be)
-            k = [x[1] for x in result if x[0] == max(result)[0]][0]
+            k = [(x[1], x[2]) for x in result if x[0] == max(result)[0]][0]
             logging.debug('%s is the selected method' % repr(k))
             return self.__action_table[k]
         except:
@@ -149,7 +152,7 @@ def application(environ, start_response):
     splitFname = fname.strip('/').split('/')
     logging.debug('splitFname: %s' % splitFname)
 
-    item = dc.getAction(splitFname)
+    item = dc.getAction(environ['REQUEST_METHOD'], splitFname)
     logging.debug('item: %s' % str(item))
 
     # Among others, this will filter wrong function names,
