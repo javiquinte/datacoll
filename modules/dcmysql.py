@@ -181,6 +181,7 @@ class DC_Module(object):
     def __init__(self, dc, confFile='../datacoll.cfg'):
         dc.registerAction('GET', ("collections",), self.collections)
         dc.registerAction('POST', ("collections",), self.collectionsPOST)
+        dc.registerAction('PUT', ("collections",), self.collectionsPUT)
         dc.registerAction('GET', ("collections", "*", "capabilities"), self.capabilities)
         dc.registerAction('GET', ("collections", "*", "members"), self.members)
         dc.registerAction('GET', ("collections", "*", "members", "*",
@@ -335,6 +336,95 @@ class DC_Module(object):
                 raise WINotFoundError(message)
 
             return Member._make(member).toJSON()
+
+    def collectionsPUT(self, environ):
+        """Update a collection.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single collection in JSON format.
+        :rtype: string
+        :raise: WIClientError
+
+        """
+
+        form = ''
+        try:
+            length = int(environ.get('CONTENT_LENGTH', '0'))
+        except ValueError:
+            length = 0
+
+        # If there is a body to read
+        if length != 0:
+            form = environ['wsgi.input'].read(length)
+        else:
+            form = environ['wsgi.input'].read()
+
+
+        logging.debug('Text received with request:\n%s' % form)
+
+        jsonColl = json.loads(form)
+
+        # Read only the fields that we support
+        owner = jsonColl['properties']['ownership']['owner'].strip()
+        pid = jsonColl['id'].strip()
+
+        # Insert only if the user does not exist yet
+        cursor = self.conn.cursor()
+        query = 'insert into user (mail) select * from (select "%s") as tmp ' % owner
+        query = '%s where not exists (select id from user where mail="%s") limit 1' % (query, owner)
+        logging.debug(query)
+        cursor.execute(query)
+        self.conn.commit()
+
+        # Read the ID from user
+        query = 'select id from user where mail = "%s"' % owner.strip()
+        logging.debug(query)
+        cursor.execute(query)
+
+        # Read user ID
+        uid = cursor.fetchone()[0]
+
+        query = 'select count(*) from collection where pid = "%s"' % pid
+        logging.debug(query)
+        cursor.execute(query)
+        # FIXME Check the type of numColls!
+        numColls = cursor.fetchone()
+
+        if (numColls[0] != 1):
+            # Send Error 400
+            messDict = {'code': 0,
+                        'message': 'Collection ID already exists! (%s)' % pid
+                       }
+            message = json.dumps(messDict)
+            cursor.close()
+            raise WIClientError(message)
+
+        query = 'update collection set owner=%s, ts=DEFAULT where pid="%s"' % (uid, pid)
+        logging.debug(query)
+        cursor.execute(query)
+        self.conn.commit()
+        cursor.close()
+
+        query = 'select pid, mail, ts from collection as c inner join'
+        query = '%s user as u on c.owner = u.id' % query
+
+        whereClause = list()
+
+        whereClause.append('c.pid = "%s"' % cpid)
+
+        if len(whereClause):
+            query = '%s where %s' % (query, ' and '.join(whereClause))
+
+        if self.limit:
+            query = '%s limit %s' % (query, self.limit)
+
+        logging.debug(query)
+        cursor.execute(query)
+
+        coll = cursor.fetchone()
+
+        return Collection._make(coll).toJSON()
 
     def collectionsPOST(self, environ):
         """Create a new collection.
