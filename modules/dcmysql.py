@@ -404,14 +404,13 @@ class DC_Module(object):
         logging.debug(query)
         cursor.execute(query)
         self.conn.commit()
-        cursor.close()
 
         query = 'select pid, mail, ts from collection as c inner join'
         query = '%s user as u on c.owner = u.id' % query
 
         whereClause = list()
 
-        whereClause.append('c.pid = "%s"' % cpid)
+        whereClause.append('c.pid = "%s"' % pid)
 
         if len(whereClause):
             query = '%s where %s' % (query, ' and '.join(whereClause))
@@ -423,6 +422,7 @@ class DC_Module(object):
         cursor.execute(query)
 
         coll = cursor.fetchone()
+        cursor.close()
 
         return Collection._make(coll).toJSON()
 
