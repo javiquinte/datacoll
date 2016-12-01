@@ -4,7 +4,6 @@ Data Collection API implementation for GEOFON
 To do list
 ==========
 
-* Check all input to avoid SQL Injection (very important)
 * All the errors 401 related to unauthorized access are still missing.
 
 License
