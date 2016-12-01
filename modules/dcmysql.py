@@ -188,6 +188,7 @@ class DC_Module(object):
         dc.registerAction('PUT', ("collections",), self.collectionsPUT)
         dc.registerAction('GET', ("collections", "*", "capabilities"), self.capabilities)
         dc.registerAction('GET', ("collections", "*", "members"), self.members)
+        dc.registerAction('POST', ("collections", "*", "members"), self.membersPOST)
         dc.registerAction('GET', ("collections", "*", "members", "*",
                                   "properties"), self.memberProp)
 
@@ -442,6 +443,75 @@ class DC_Module(object):
         cursor.close()
 
         return Collection._make(coll).toJSON()
+
+    def membersPOST(self, environ):
+        """Add a new member.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single member or a member list in
+                  JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+        :raise: WICreated, WINotFoundError
+
+        """
+
+        form = ''
+        try:
+            length = int(environ.get('CONTENT_LENGTH', '0'))
+        except ValueError:
+            length = 0
+
+        # If there is a body to read
+        if length != 0:
+            form = environ['wsgi.input'].read(length)
+        else:
+            form = environ['wsgi.input'].read()
+
+        logging.debug('Text received with request:\n%s' % form)
+
+        jsonColl = json.loads(form)
+
+        splitColl = environ['PATH_INFO'].strip('/').split('/')
+
+        # Read the collection ID
+        try:
+            cid = int(splitColl[1])
+        except:
+            cid = None
+
+        # Read only the fields that we support
+        checksum = jsonColl['checksum'].strip()
+        pid = jsonColl['pid'].strip()
+
+        # Insert only if the user does not exist yet
+        cursor = self.conn.cursor()
+
+        query = 'select count(*) from collection where id = %s'
+        sqlParams = [cid]
+        logging.debug(query)
+        cursor.execute(query, tuple(sqlParams))
+
+        # FIXME Check the type of numColls!
+        numColls = cursor.fetchone()
+        logging.debug('Collections found: %s' % numColls)
+
+        if ((type(numColls) != tuple) or (numColls[0] != 1)):
+            # Send Error 400
+            messDict = {'code': 0,
+                        'message': 'Collection ID could not be found! (%s)' % cid
+                       }
+            message = json.dumps(messDict)
+            cursor.close()
+            raise WINotFoundError(message)
+
+        query = 'insert into member (cid, pid, checksum) values (%s, %s, %s)'
+        sqlParams = [cid, pid, checksum]
+        logging.debug(query)
+        cursor.execute(query, tuple(sqlParams))
+        self.conn.commit()
+        cursor.close()
+        raise WICreated('Member %s added' % str(pid))
 
     def collectionsPOST(self, environ):
         """Create a new collection.
