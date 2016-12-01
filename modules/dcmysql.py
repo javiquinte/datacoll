@@ -189,6 +189,7 @@ class DC_Module(object):
         dc.registerAction('GET', ("collections", "*", "capabilities"), self.capabilities)
         dc.registerAction('GET', ("collections", "*", "members"), self.members)
         dc.registerAction('POST', ("collections", "*", "members"), self.membersPOST)
+        dc.registerAction('PUT', ("collections", "*", "members",), self.membersPUT)
         dc.registerAction('GET', ("collections", "*", "members", "*",
                                   "properties"), self.memberProp)
 
@@ -351,6 +352,87 @@ class DC_Module(object):
                 raise WINotFoundError(message)
 
             return Member._make(member).toJSON()
+
+    def membersPUT(self, environ):
+        """Update a member.
+
+        :param environ: Environment as provided by the Apache WSGI module
+        :type environ: dict ?
+        :returns: An iterable object with a single member in JSON format.
+        :rtype: string
+        :raise: WIClientError
+
+        """
+
+        form = ''
+        try:
+            length = int(environ.get('CONTENT_LENGTH', '0'))
+        except ValueError:
+            length = 0
+
+        # If there is a body to read
+        if length != 0:
+            form = environ['wsgi.input'].read(length)
+        else:
+            form = environ['wsgi.input'].read()
+
+        splitColl = environ['PATH_INFO'].strip('/').split('/')
+
+        # Read the collection ID
+        try:
+            cid = int(splitColl[1])
+        except:
+            cid = None
+
+        # Read the member ID
+        try:
+            mid = int(splitColl[3])
+        except:
+            mid = None
+
+        logging.debug('Text received with request:\n%s' % form)
+
+        jsonMemb = json.loads(form)
+
+        # Read only the fields that we support
+        pid = jsonMemb['pid'].strip()
+        checksum = jsonMemb['checksum'].strip()
+
+        # Insert only if the user does not exist yet
+        cursor = self.conn.cursor()
+
+        query = 'select count(*) from member where id=%s and cid=%s'
+        logging.debug(query)
+        cursor.execute(query, (mid, cid))
+        # FIXME Check the type of numColls!
+        numColls = cursor.fetchone()
+
+        if (numColls[0] != 1):
+            # Send Error 404
+            messDict = {'code': 0,
+                        'message': 'Collection (%s) or Member ID (%s) not found!' % (cid, mid)
+                       }
+            message = json.dumps(messDict)
+            cursor.close()
+            raise WINotFoundError(message)
+
+        query = 'update member set pid=%s, checksum=%s where cid=%s and id=%s'
+        sqlParams = [pid, checksum, cid, mid]
+        logging.debug(query)
+        logging.debug(str(sqlParams))
+        cursor.execute(query, tuple(sqlParams))
+        self.conn.commit()
+
+        query = 'select id, pid, checksum from member as m where cid=%s and id=%s'
+
+        logging.debug(query)
+        logging.debug(str((cid, mid)))
+        cursor.execute(query, (cid, mid))
+
+        coll = cursor.fetchone()
+        cursor.close()
+
+        return Member._make(coll).toJSON()
 
     def collectionsPUT(self, environ):
         """Update a collection.
