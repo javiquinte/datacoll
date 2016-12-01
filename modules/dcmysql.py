@@ -39,11 +39,12 @@ capabilitiesFixed = {'isOrdered': False,
                      'metadataIsMutable': False
                     }
 
-class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
+class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
     """Namedtuple representing a :class:`~Collection`.
 
     It includes a method to return its JSON version.
-       id: uuid or pid identifying the collection
+       id: collection ID (int)
+       pid: uuid or pid identifying the collection
        mail: mail address of the owner
        ts: creation of the collection
 
@@ -61,6 +62,7 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
         """
         # FIXME Capabilities should be later separated between (im)mutable
         interVar = ({'id': self.id,
+                     'pid': self.pid,
                      'creation': self.ts,
                      'capabilities': capabilitiesFixed,
                      'properties': {'ownership': {'owner': (self.mail)},
@@ -72,7 +74,7 @@ class Collection(namedtuple('Collection', ['id', 'mail', 'ts'])):
         return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
-class Member(namedtuple('Member', ['id', 'checksum'])):
+class Member(namedtuple('Member', ['id', 'pid', 'checksum'])):
     """Namedtuple representing a :class:`~Member` of a :class:`~Collection`.
 
     It includes methods to to return the JSON version of the member.
@@ -93,6 +95,7 @@ class Member(namedtuple('Member', ['id', 'checksum'])):
         """
         # FIXME Capabilities should be centralized in the top part of the file
         interVar = ({'id': self.id,
+                     'pid': self.pid,
                      'checksum': self.checksum
                     })
         return json.dumps(interVar)
@@ -147,6 +150,7 @@ class CollJSONIter(object):
 
         # Load a record
         reg = self.cursor.fetchone()
+        logging.debug(str(reg))
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
             self.cursor.close()
@@ -199,7 +203,7 @@ class DC_Module(object):
         self.user = config.get('mysql', 'user')
         self.password = config.get('mysql', 'password')
         self.db = config.get('mysql', 'db')
-        self.limit = config.get('mysql', 'limit')
+        self.limit = config.getint('mysql', 'limit')
 
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)
@@ -225,17 +229,19 @@ class DC_Module(object):
         splitColl = environ['PATH_INFO'].strip('/').split('/')
 
         try:
-            cpid = splitColl[1]
+            cid = int(splitColl[1])
         except:
-            cpid = None
+            cid = None
 
         try:
-            mpid = splitColl[3]
+            mid = int(splitColl[3])
         except:
-            mpid = None
+            mid = None
 
         try:
-            prop = splitColl[5]
+            prop = splitColl[5].lower()
+            if not prop.isalpha():
+                raise Exception()
         except:
             messDict = {'code': 0,
                         'message': 'Malformed request'
@@ -243,25 +249,29 @@ class DC_Module(object):
             message = json.dumps(messDict)
             raise WIClientError(message)
 
-        # FIXME All parameters MUST be checked to avoid unwanted SQL injection!
+        # FIXME This must be the only normal replacement because the execute
+        # statement do not allow to replace something as a field.
         cursor = self.conn.cursor()
-        query = 'select m.%s from member as m inner join' % prop.lower()
-        query = '%s collection as c on m.cid = c.id' % query
+        query = 'select m.%s from member as m inner join ' % prop
+        query = query + 'collection as c on m.cid = c.id'
 
         whereClause = list()
-        whereClause.append('c.pid = "%s"' % cpid)
+        whereClause.append('c.id = %s')
+        sqlParams = [cid]
 
-        if mpid is not None:
-            whereClause.append('m.pid = "%s"' % mpid)
+        whereClause.append('m.id = %s')
+        sqlParams.append(mid)
 
-        query = '%s where %s' % (query, ' and '.join(whereClause))
+        query = query + ' where ' + ' and '.join(whereClause)
 
         if self.limit:
-            query = '%s limit %s' % (query, self.limit)
+            query = query + ' limit %s'
+            sqlParams.append(self.limit)
 
         logging.debug(query)
+        logging.debug(str(sqlParams))
         try:
-            cursor.execute(query)
+            cursor.execute(query, tuple(sqlParams))
         except:
             messDict = {'code': 0,
                         'message': 'Requested property %s not found' % prop
@@ -294,34 +304,38 @@ class DC_Module(object):
         splitColl = environ['PATH_INFO'].strip('/').split('/')
 
         try:
-            cpid = splitColl[1]
+            cid = int(splitColl[1])
         except:
-            cpid = None
+            cid = None
 
         try:
-            mpid = splitColl[3]
+            mid = int(splitColl[3])
         except:
-            mpid = None
+            mid = None
 
         cursor = self.conn.cursor()
-        query = 'select m.pid, m.checksum from member as m inner join'
-        query = '%s collection as c on m.cid = c.id' % query
+        query = 'select m.id, m.pid, m.checksum from member as m inner join '
+        query = query + 'collection as c on m.cid = c.id '
 
         whereClause = list()
-        whereClause.append('c.pid = "%s"' % cpid)
+        whereClause.append('c.id = %s')
+        sqlParams = [cid]
 
-        if mpid is not None:
-            whereClause.append('m.pid = "%s"' % mpid)
+        if mid is not None:
+            whereClause.append('m.id = %s')
+            sqlParams.append(mid)
 
-        query = '%s where %s' % (query, ' and '.join(whereClause))
+        query = query + ' where ' + ' and '.join(whereClause)
 
         if self.limit:
-            query = '%s limit %s' % (query, self.limit)
+            query = query + ' limit %s'
+            sqlParams.append(self.limit)
 
         logging.debug(query)
-        cursor.execute(query)
+        logging.debug(str(sqlParams))
+        cursor.execute(query, sqlParams)
 
-        if mpid is None:
+        if mid is None:
             return CollJSONIter(cursor, Member)
         else:
             # Read one member because an ID is given. Check that there is
@@ -330,7 +344,7 @@ class DC_Module(object):
             cursor.close()
             if member is None:
                 messDict = {'code': 0,
-                            'message': 'Member ID %s or Collection ID %s not found' % (mpid, cpid)
+                            'message': 'Member ID %s or Collection ID %s not found' % (mid, cid)
                            }
                 message = json.dumps(messDict)
                 raise WINotFoundError(message)
@@ -367,50 +381,53 @@ class DC_Module(object):
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership']['owner'].strip()
-        pid = jsonColl['id'].strip()
+        cid = int(jsonColl['id'])
 
         # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
-        query = 'insert into user (mail) select * from (select "%s") as tmp ' % owner
-        query = '%s where not exists (select id from user where mail="%s") limit 1' % (query, owner)
+        query = 'insert into user (mail) select * from (select %s) as tmp '
+        query = query + 'where not exists (select id from user where mail=%s) limit 1'
+        sqlParams = [owner, owner]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the ID from user
-        query = 'select id from user where mail = "%s"' % owner.strip()
+        query = 'select id from user where mail = %s'
+        sqlParams = [owner]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
 
         # Read user ID
         uid = cursor.fetchone()[0]
 
-        query = 'select count(*) from collection where pid = "%s"' % pid
+        query = 'select count(*) from collection where id = %s'
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, (cid,))
         # FIXME Check the type of numColls!
         numColls = cursor.fetchone()
 
         if (numColls[0] != 1):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID already exists! (%s)' % pid
+                        'message': 'Collection ID already exists! (%s)' % cid
                        }
             message = json.dumps(messDict)
             cursor.close()
             raise WIClientError(message)
 
-        query = 'update collection set owner=%s, ts=DEFAULT where pid="%s"' % (uid, pid)
+        query = 'update collection set owner=%s, ts=DEFAULT where id=%s'
+        sqlParams = [uid, cid]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select pid, mail, ts from collection as c inner join'
+        query = 'select c.id, c.pid, mail, c.ts from collection as c inner join'
         query = '%s user as u on c.owner = u.id' % query
 
         whereClause = list()
 
-        whereClause.append('c.pid = "%s"' % pid)
+        whereClause.append('c.id = %s')
 
         if len(whereClause):
             query = '%s where %s' % (query, ' and '.join(whereClause))
@@ -419,7 +436,7 @@ class DC_Module(object):
             query = '%s limit %s' % (query, self.limit)
 
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, (cid,))
 
         coll = cursor.fetchone()
         cursor.close()
@@ -457,42 +474,47 @@ class DC_Module(object):
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership']['owner'].strip()
-        pid = jsonColl['id'].strip()
+        pid = jsonColl['pid'].strip()
 
         # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
-        query = 'insert into user (mail) select * from (select "%s") as tmp ' % owner
-        query = '%s where not exists (select id from user where mail="%s") limit 1' % (query, owner)
+        query = 'insert into user (mail) select * from (select %s) as tmp '
+        query = query + 'where not exists (select id from user where mail=%s) limit 1'
+        sqlParams = [owner, owner]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the ID from user
-        query = 'select id from user where mail = "%s"' % owner.strip()
+        query = 'select id from user where mail = %s'
+        sqlParams = [owner]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
 
         # Read user ID
         uid = cursor.fetchone()[0]
 
-        query = 'select count(*) from collection where pid = "%s"' % pid
+        query = 'select count(*) from collection where pid = %s'
+        sqlParams = [pid]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
+
         # FIXME Check the type of numColls!
         numColls = cursor.fetchone()
 
         if ((type(numColls) != tuple) or numColls[0]):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID already exists! (%s)' % pid
+                        'message': 'Collection PID already exists! (%s)' % pid
                        }
             message = json.dumps(messDict)
             cursor.close()
             raise WIClientError(message)
 
-        query = 'insert into collection (pid, owner) values ("%s", %s)' % (pid, uid)
+        query = 'insert into collection (pid, owner) values (%s, %s)'
+        sqlParams = [pid, uid]
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
         cursor.close()
         raise WICreated('Collection %s created' % str(pid))
@@ -521,34 +543,38 @@ class DC_Module(object):
 
         try:
             # Read collection ID
-            cpid = splitColl[1]
+            cid = int(splitColl[1])
         except:
-            cpid = None
+            cid = None
 
         cursor = self.conn.cursor()
-        query = 'select pid, mail, ts from collection as c inner join'
-        query = '%s user as u on c.owner = u.id' % query
+        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
+        query = query + 'user as u on c.owner = u.id'
 
         whereClause = list()
+        sqlParams = list()
 
         # Filter by owner if present in the parameters
         if owner is not None:
-            whereClause.append('u.mail = "%s"' % owner)
+            whereClause.append('u.mail = %s')
+            sqlParams.append(owner)
 
         # Show only one collection if ID is present
-        if cpid is not None:
-            whereClause.append('c.pid = "%s"' % cpid)
+        if cid is not None:
+            whereClause.append('c.id = %s')
+            sqlParams.append(cid)
 
         if len(whereClause):
-            query = '%s where %s' % (query, ' and '.join(whereClause))
+            query = query + ' where ' + ' and '.join(whereClause)
 
         if self.limit:
-            query = '%s limit %s' % (query, self.limit)
+            query = query + ' limit %s'
+            sqlParams.append(self.limit)
 
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, tuple(sqlParams))
 
-        if cpid is None:
+        if cid is None:
             # If no ID is given iterate through all collections in cursor
             return CollJSONIter(cursor, Collection)
         else:
@@ -558,7 +584,7 @@ class DC_Module(object):
             cursor.close()
             if coll is None:
                 messDict = {'code': 0,
-                            'message': 'Collection ID %s not found' % cpid
+                            'message': 'Collection ID %s not found' % cid
                            }
                 message = json.dumps(messDict)
                 raise WINotFoundError(message)
@@ -580,20 +606,20 @@ class DC_Module(object):
         # To be modified in the future with mutable collections
         splitColl = environ['PATH_INFO'].strip('/').split('/')
         # It should be clear that the first component is "collections" and the
-        # third one is "capabilities". The second is the ID and should br read.
-        cpid = splitColl[1]
+        # third one is "capabilities". The second is the ID and should be read.
+        cid = int(splitColl[1])
 
         cursor = self.conn.cursor()
-        query = 'select pid from collection where pid = "%s"' % cpid
+        query = 'select id from collection where id = %s'
 
         logging.debug(query)
-        cursor.execute(query)
+        cursor.execute(query, (cid,))
 
         coll = cursor.fetchone()
         cursor.close()
         if coll is None:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % cpid
+                        'message': 'Collection ID %s not found' % cid
                        }
             message = json.dumps(messDict)
             raise WINotFoundError(message)
