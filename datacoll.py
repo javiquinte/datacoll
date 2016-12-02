@@ -31,6 +31,7 @@ import glob
 import json
 import imp
 import fnmatch
+from wsgicomm import WIRedirect
 from wsgicomm import WIContentError
 from wsgicomm import WIClientError
 from wsgicomm import WIURIError
@@ -38,6 +39,7 @@ from wsgicomm import WIError
 from wsgicomm import send_plain_response
 from wsgicomm import send_dynamicfile_response
 from wsgicomm import send_error_response
+from wsgicomm import redirect_page
 import logging
 
 try:
@@ -179,6 +181,9 @@ def application(environ, start_response):
         else:
             return send_dynamicfile_response(status, iterObj, start_response)
 
+    except WIRedirect as w:
+        logging.debug('Redirecting to %s' % w.url)
+        return redirect_page(w.url, start_response)
     except WIError as w:
         return send_error_response(w.status, w.body, start_response)
 

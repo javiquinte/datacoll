@@ -75,6 +75,27 @@ class WIError(Exception):
         return repr(self.status) + ': ' + repr(self.body)
 
 
+class WIRedirect(WIError):
+    """Exception to signal that an object has to be retrieved from a different
+    URL (301).
+
+    :platform: Linux
+
+    """
+
+    def __init__(self, url, **kwargs):
+        """WIRedirect constructor.
+
+        If some parameter is given it will be passed to WIError as body.
+
+        """
+        if ((not isinstance(url, basestring)) or not url):
+            raise Exception('Missing url parameter creating WIRedirect')
+
+        self.url = url
+        WIError.__init__(self, "301 Moved permanently", "")
+
+
 class WICreated(WIError):
     """Exception to signal that an object was successfully created (201).
 
