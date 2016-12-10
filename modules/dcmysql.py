@@ -567,8 +567,9 @@ class DC_Module(object):
             cid = None
 
         # Read only the fields that we support
+        pid = jsonColl.get('pid', None)
+        url = jsonColl.get('url', None)
         checksum = jsonColl['checksum'].strip()
-        pid = jsonColl['pid'].strip()
 
         # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
@@ -591,13 +592,13 @@ class DC_Module(object):
             cursor.close()
             raise WINotFoundError(message)
 
-        query = 'insert into member (cid, pid, checksum) values (%s, %s, %s)'
-        sqlParams = [cid, pid, checksum]
+        query = 'insert into member (cid, pid, url, checksum) values (%s, %s, %s, %s)'
+        sqlParams = [cid, pid, url, checksum]
         logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
         cursor.close()
-        raise WICreated('Member %s added' % str(pid))
+        raise WICreated('Member %s added' % (pid if pid is not None else url))
 
     def collectionsPOST(self, environ):
         """Create a new collection.
