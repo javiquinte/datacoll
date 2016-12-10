@@ -98,7 +98,7 @@ class DC_Module(object):
             mid = None
 
         cursor = self.conn.cursor()
-        query = 'select m.pid from member as m inner join collection as c on '
+        query = 'select m.pid, m.url from member as m inner join collection as c on '
         query = query + 'm.cid = c.id'
 
         whereClause = list()
@@ -126,10 +126,14 @@ class DC_Module(object):
             raise WINotFoundError(message)
 
         # Get the PID and solve it through Handle
-        url = 'http://hdl.handle.net/%s' % cursor.fetchone()[0]
-        logging.debug('Downloading data from %s' % url)
+        dbPid, dbUrl = cursor.fetchone()
 
-        # url = 'http://www.google.com'
+        if dbPid is not None:
+            url = 'http://hdl.handle.net/%s' % dbPid
+        else:
+            url = dbUrl
+
+        logging.debug('Downloading data from %s' % url)
 
         cursor.close()
         raise WIRedirect(url=url)

@@ -74,11 +74,13 @@ class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
         return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
-class Member(namedtuple('Member', ['id', 'pid', 'checksum'])):
+class Member(namedtuple('Member', ['id', 'pid', 'url', 'checksum'])):
     """Namedtuple representing a :class:`~Member` of a :class:`~Collection`.
 
     It includes methods to to return the JSON version of the member.
-       id: uuid or pid identifying the member
+       id: int identifying the member
+       pid: a global PID resolvable via handle.net
+       url: a URL where the data can be download
        checksum: checksum of the data to check its validity
 
     :platform: Any
@@ -96,6 +98,7 @@ class Member(namedtuple('Member', ['id', 'pid', 'checksum'])):
         # FIXME Capabilities should be centralized in the top part of the file
         interVar = ({'id': self.id,
                      'pid': self.pid,
+                     'url': self.url,
                      'checksum': self.checksum
                     })
         return json.dumps(interVar)
@@ -316,7 +319,7 @@ class DC_Module(object):
             mid = None
 
         cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.checksum from member as m inner join '
+        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner join '
         query = query + 'collection as c on m.cid = c.id '
 
         whereClause = list()
@@ -395,7 +398,8 @@ class DC_Module(object):
         jsonMemb = json.loads(form)
 
         # Read only the fields that we support
-        pid = jsonMemb['pid'].strip()
+        pid = jsonMemb.get('pid', None)
+        url = jsonMemb.get('url', None)
         checksum = jsonMemb['checksum'].strip()
 
         # Insert only if the user does not exist yet
@@ -416,23 +420,23 @@ class DC_Module(object):
             cursor.close()
             raise WINotFoundError(message)
 
-        query = 'update member set pid=%s, checksum=%s where cid=%s and id=%s'
-        sqlParams = [pid, checksum, cid, mid]
+        query = 'update member set pid=%s, url=%s, checksum=%s where cid=%s and id=%s'
+        sqlParams = [pid, url, checksum, cid, mid]
         logging.debug(query)
         logging.debug(str(sqlParams))
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select id, pid, checksum from member as m where cid=%s and id=%s'
+        query = 'select id, pid, url, checksum from member as m where cid=%s and id=%s'
 
         logging.debug(query)
         logging.debug(str((cid, mid)))
         cursor.execute(query, (cid, mid))
 
-        coll = cursor.fetchone()
+        member = cursor.fetchone()
         cursor.close()
 
-        return Member._make(coll).toJSON()
+        return Member._make(member).toJSON()
 
     def collectionsPUT(self, environ):
         """Update a collection.

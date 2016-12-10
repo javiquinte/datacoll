@@ -221,7 +221,8 @@ def redirect_page(url, start_response):
 
     """
     response_headers = [('Location', url)]
-    start_response('301 Moved Permanently', response_headers)
+    start_response('302 Found', response_headers)
+    # start_response('200 OK', response_headers)
     return ''
 
 
