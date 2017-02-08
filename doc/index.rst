@@ -46,6 +46,10 @@ for your web server.
 Installation on Apache
 ----------------------
 
+.. warning ::
+   This version should run as a standalone application. There is no need to
+   deploy it on top of Apache.
+
 To deploy the EIDA Routing Service on an Apache2 web server using `mod_wsgi`:
 
 #. Extract the package in the desired directory.
