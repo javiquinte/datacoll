@@ -195,8 +195,8 @@ class CollectionsAPI(object):
     # FIXME ! It is still not clear why here the handler looks for "index" and
     # not "GET".
     @cherrypy.expose(['index'])
-    def GET(self, owner=None):
-        """Return a list of collection(s).
+    def GET(self, filter_by_owner=None):
+        """Return a list of collections.
 
         :returns: An iterable object with a collection list in JSON format.
         :rtype: string or :class:`~CollJSONIter`
@@ -211,9 +211,9 @@ class CollectionsAPI(object):
         sqlParams = list()
 
         # Filter by owner if present in the parameters
-        if owner is not None:
+        if filter_by_owner is not None:
             whereClause.append('u.mail = %s')
-            sqlParams.append(owner)
+            sqlParams.append(filter_by_owner)
 
         if len(whereClause):
             query = query + ' where ' + ' and '.join(whereClause)
@@ -278,7 +278,6 @@ class CollectionsAPI(object):
 
         query = 'select count(*) from collection where pid = %s'
         sqlParams = [pid]
-        logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
 
         # FIXME Check the type of numColls!
@@ -295,11 +294,10 @@ class CollectionsAPI(object):
 
         query = 'insert into collection (pid, owner) values (%s, %s)'
         sqlParams = [pid, uid]
-        logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
         cursor.close()
-        raise cherrypy.HTTPError(202, 'Collection %s created' % str(pid))
+        raise cherrypy.HTTPError(201, 'Collection %s created' % str(pid))
 
 class CollectionAPI(object):
     def __init__(self, conn):
@@ -362,37 +360,37 @@ class CollectionAPI(object):
         query = 'insert into user (mail) select * from (select %s) as tmp '
         query = query + 'where not exists (select id from user where mail=%s) limit 1'
         sqlParams = [owner, owner]
-        logging.debug(query)
+
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the ID from user
         query = 'select id from user where mail = %s'
         sqlParams = [owner]
-        logging.debug(query)
+
         cursor.execute(query, tuple(sqlParams))
 
         # Read user ID
         uid = cursor.fetchone()[0]
 
         query = 'select count(*) from collection where id = %s'
-        logging.debug(query)
-        cursor.execute(query, (cid,))
+
+        cursor.execute(query, (collID,))
         # FIXME Check the type of numColls!
         numColls = cursor.fetchone()
 
         if (numColls[0] != 1):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID already exists! (%s)' % cid
+                        'message': 'Collection ID not found! (%s)' % collID
                        }
             message = json.dumps(messDict)
             cursor.close()
-            raise cherrypy.HTTPError(400, message)
+            raise cherrypy.HTTPError(404, message)
 
         query = 'update collection set owner=%s, ts=DEFAULT where id=%s'
-        sqlParams = [uid, cid]
-        logging.debug(query)
+        sqlParams = [uid, collID]
+
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
@@ -409,7 +407,6 @@ class CollectionAPI(object):
         if limit:
             query = '%s limit %s' % (query, limit)
 
-        logging.debug(query)
         cursor.execute(query, (collID,))
 
         coll = cursor.fetchone()
@@ -424,7 +421,6 @@ class CollectionAPI(object):
 
         :returns: An iterable object with a single collection in JSON format.
         :rtype: string or :class:`~CollJSONIter`
-        :raise: WINotFoundError
 
         """
         cursor = self.conn.cursor()
@@ -445,7 +441,6 @@ class CollectionAPI(object):
             query = query + ' limit %s'
             sqlParams.append(limit)
 
-        logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
 
         # Read one collection because an ID is given. Check that there is
@@ -457,7 +452,7 @@ class CollectionAPI(object):
                         'message': 'Collection ID %s not found' % collID
                        }
             message = json.dumps(messDict)
-            raise WINotFoundError(message)
+            raise cherrypy.HTTPError(404, message)
 
         return Collection._make(coll).toJSON()
 

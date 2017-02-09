@@ -50,7 +50,7 @@ Collection API and the status of this implementation.
 /collections/{id}/members/{id}                     GET        Yes
 /collections/{id}/members/{id}                     PUT        Migrate
 /collections/{id}/members/{id}/properties/{prop}   DELETE     No
-/collections/{id}/members/{id}/properties/{prop}   GET        Yes
+/collections/{id}/members/{id}/properties/{prop}   GET        Migrate
 /collections/{id}/members/{id}/properties/{prop}   PUT        No
 ------------------------------------------------- -------- ------------- -----------------
 
