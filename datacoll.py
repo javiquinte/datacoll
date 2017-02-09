@@ -162,7 +162,30 @@ class MembersAPI(object):
 
     @cherrypy.expose
     def GET(self, collID):
-        return "members.GET(%d)" % int(collID)
+        """Return a list of collection members in JSON format.
+
+        :returns: An iterable object with a member list in JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+
+        cursor = self.conn.cursor()
+        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner join '
+        query = query + 'collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        return CollJSONIter(cursor, Member)
 
 
 class CollectionsAPI(object):
