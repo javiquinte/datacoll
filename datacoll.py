@@ -446,11 +446,16 @@ class DataColl(object):
                         vpath.pop(0)
                         return self.coll
 
-                    if len(vpath) > 1:
-                        cherrypy.request.params['memberID'] = vpath.pop(1)
-                        return self.member
+                    if vpath[1] == "members":
+                        # Remove "members"
+                        vpath.pop(1)
 
-                    return self.members
+                        # Check if there are more parameters
+                        if len(vpath) > 1:
+                            cherrypy.request.params['memberID'] = vpath.pop(1)
+                            return self.member
+
+                        return self.members
 
                 print vpath
                 return self.coll
