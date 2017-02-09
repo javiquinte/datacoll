@@ -31,7 +31,12 @@ import configparser
 import logging
 import os
 import json
+import MySQLdb
+from dcmysql import Collection
+from dcmysql import CollJSONIter
 
+# FIXME This is hardcoded but should be read from the configuration file
+limit = 100
 # For the time being these are the capabilities for the immutable datasets
 # coming from the user requests.
 capabilitiesFixed = {'isOrdered': False,
@@ -42,6 +47,9 @@ capabilitiesFixed = {'isOrdered': False,
 
 
 class MemberAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
     @cherrypy.expose
     def GET(self, collID, memberID):
         return "member.GET(%d, %d)" % (int(collID), int(memberID))
@@ -109,12 +117,18 @@ class MemberAPI(object):
 
 
 class MembersAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
     @cherrypy.expose
     def GET(self, collID):
         return "members.GET(%d)" % int(collID)
 
 
 class CollectionsAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
     # FIXME ! It is still not clear why here the handler looks for "index" and
     # not "GET".
     @cherrypy.expose(['index'])
@@ -140,9 +154,9 @@ class CollectionsAPI(object):
             whereClause.append('u.mail = %s')
             sqlParams.append(owner)
 
-        if self.limit:
+        if limit:
             query = query + ' limit %s'
-            sqlParams.append(self.limit)
+            sqlParams.append(limit)
 
         logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
@@ -152,6 +166,9 @@ class CollectionsAPI(object):
 
 
 class CollectionAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
     @cherrypy.expose
     def capabilities(self, collID):
         """Return the capabilities of a collection.
@@ -327,8 +344,8 @@ class CollectionAPI(object):
         if len(whereClause):
             query = '%s where %s' % (query, ' and '.join(whereClause))
 
-        if self.limit:
-            query = '%s limit %s' % (query, self.limit)
+        if limit:
+            query = '%s limit %s' % (query, limit)
 
         logging.debug(query)
         cursor.execute(query, (collID,))
@@ -362,9 +379,9 @@ class CollectionAPI(object):
         if len(whereClause):
             query = query + ' where ' + ' and '.join(whereClause)
 
-        if self.limit:
+        if limit:
             query = query + ' limit %s'
-            sqlParams.append(self.limit)
+            sqlParams.append(limit)
 
         logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
@@ -385,10 +402,24 @@ class CollectionAPI(object):
 
 class DataColl(object):
     def __init__(self):
-        self.coll = CollectionAPI()
-        self.members = MembersAPI()
-        self.member = MemberAPI()
-        self.colls = CollectionsAPI()
+        config = configparser.RawConfigParser()
+        here = os.path.dirname(__file__)
+        config.read(os.path.join(here, 'datacoll.cfg'))
+
+        # Read connection parameters
+        self.host = config.get('mysql', 'host')
+        self.user = config.get('mysql', 'user')
+        self.password = config.get('mysql', 'password')
+        self.db = config.get('mysql', 'db')
+        limit = config.getint('mysql', 'limit')
+
+        self.conn = MySQLdb.connect(self.host, self.user, self.password,
+                                    self.db)
+
+        self.coll = CollectionAPI(self.conn)
+        self.members = MembersAPI(self.conn)
+        self.member = MemberAPI(self.conn)
+        self.colls = CollectionsAPI(self.conn)
 
     def _cp_dispatch(self, vpath):
         queryStr = '/'.join(vpath)

@@ -27,9 +27,6 @@ import configparser
 import cgi
 import MySQLdb
 from collections import namedtuple
-from wsgicomm import WINotFoundError
-from wsgicomm import WIClientError
-from wsgicomm import WICreated
 
 # For the time being these are the capabilities for the immutable datasets
 # coming from the user requests.
