@@ -33,6 +33,7 @@ import os
 import json
 import MySQLdb
 from dcmysql import Collection
+from dcmysql import Member
 from dcmysql import CollJSONIter
 
 # FIXME This is hardcoded but should be read from the configuration file
@@ -52,7 +53,46 @@ class MemberAPI(object):
 
     @cherrypy.expose
     def GET(self, collID, memberID):
-        return "member.GET(%d, %d)" % (int(collID), int(memberID))
+        """Return a single collection member in JSON format.
+
+        :returns: An iterable object with a single collection member in JSON
+                  format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+
+        cursor = self.conn.cursor()
+        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
+        query = query + 'join collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        whereClause.append('m.id = %s')
+        sqlParams.append(memberID)
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        member = cursor.fetchone()
+        cursor.close()
+        if member is None:
+            messDict = {'code': 0,
+                        'message': 'Member ID %s or Collection ID %s not found'\
+                         % (memberID, collID)
+                       }
+            message = json.dumps(messDict)
+            raise cherrypy.HTTPError(404, message)
+
+        return Member._make(member).toJSON()
 
     def POST(self, collID):
         """Add a new member.
