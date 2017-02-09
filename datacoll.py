@@ -135,10 +135,8 @@ class CollectionsAPI(object):
     def GET(self, owner=None):
         """Return a list of collection(s).
 
-        :returns: An iterable object with a single collection or a collection
-            list in JSON format.
+        :returns: An iterable object with a collection list in JSON format.
         :rtype: string or :class:`~CollJSONIter`
-        :raise: WINotFoundError
 
         """
 

@@ -168,19 +168,6 @@ class CollJSONIter(object):
 
 
 # class DC_Module(object):
-#         config = configparser.RawConfigParser()
-#         here = os.path.dirname(__file__)
-#         config.read(os.path.join(here, confFile))
-#
-#         # Read connection parameters
-#         self.host = config.get('mysql', 'host')
-#         self.user = config.get('mysql', 'user')
-#         self.password = config.get('mysql', 'password')
-#         self.db = config.get('mysql', 'db')
-#         self.limit = config.getint('mysql', 'limit')
-#
-#         self.conn = MySQLdb.connect(self.host, self.user, self.password,
-#                                     self.db)
 #
 #     def memberProp(self, environ):
 #         """Return a property of a collection member.
