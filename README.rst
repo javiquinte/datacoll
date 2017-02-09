@@ -33,7 +33,7 @@ RDA API vs this implementation
 In the following table we summarize the requests specified in the RDA Data
 Collection API and the status of this implementation.
 
-------------------------------------------------- -------- ------------- -----------------
+================================================= ======== ============= =================
   Request                                          Method   Implemented   What's missing?
 ------------------------------------------------- -------- ------------- -----------------
 /features                                          GET        Yes
@@ -52,7 +52,7 @@ Collection API and the status of this implementation.
 /collections/{id}/members/{id}/properties/{prop}   DELETE     No
 /collections/{id}/members/{id}/properties/{prop}   GET        Migrate
 /collections/{id}/members/{id}/properties/{prop}   PUT        No
-------------------------------------------------- -------- ------------- -----------------
+================================================= ======== ============= =================
 
 
 Documentation
