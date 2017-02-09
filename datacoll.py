@@ -94,6 +94,38 @@ class MemberAPI(object):
 
         return Member._make(member).toJSON()
 
+
+class MembersAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
+    @cherrypy.expose
+    def GET(self, collID):
+        """Return a list of collection members in JSON format.
+
+        :returns: An iterable object with a member list in JSON format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+
+        cursor = self.conn.cursor()
+        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner join '
+        query = query + 'collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        return CollJSONIter(cursor, Member)
+
     def POST(self, collID):
         """Add a new member.
 
@@ -156,38 +188,6 @@ class MemberAPI(object):
         raise cherrypy.HTTPError(201, 'Member %s added' % (pid if pid is not None else url))
 
 
-class MembersAPI(object):
-    def __init__(self, conn):
-        self.conn = conn
-
-    @cherrypy.expose
-    def GET(self, collID):
-        """Return a list of collection members in JSON format.
-
-        :returns: An iterable object with a member list in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-
-        cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner join '
-        query = query + 'collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
-        return CollJSONIter(cursor, Member)
-
-
 class CollectionsAPI(object):
     def __init__(self, conn):
         self.conn = conn
@@ -226,40 +226,6 @@ class CollectionsAPI(object):
 
         # If no ID is given iterate through all collections in cursor
         return CollJSONIter(cursor, Collection)
-
-
-class CollectionAPI(object):
-    def __init__(self, conn):
-        self.conn = conn
-
-    @cherrypy.expose
-    def capabilities(self, collID):
-        """Return the capabilities of a collection.
-
-        :returns: The capabilities of a collection in JSON format.
-        :rtype: string
-
-        """
-
-        # For the time being, these are fixed collections.
-        # To be modified in the future with mutable collections
-        cursor = self.conn.cursor()
-        query = 'select id from collection where id = %s'
-
-        logging.debug(query)
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-        cursor.close()
-        if coll is None:
-            messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID
-                       }
-            message = json.dumps(messDict)
-
-            raise cherrypy.HTTPError(404, message)
-
-        return json.dumps(capabilitiesFixed)
 
     @cherrypy.expose
     def POST(self):
@@ -334,6 +300,39 @@ class CollectionAPI(object):
         self.conn.commit()
         cursor.close()
         raise cherrypy.HTTPError(202, 'Collection %s created' % str(pid))
+
+class CollectionAPI(object):
+    def __init__(self, conn):
+        self.conn = conn
+
+    @cherrypy.expose
+    def capabilities(self, collID):
+        """Return the capabilities of a collection.
+
+        :returns: The capabilities of a collection in JSON format.
+        :rtype: string
+
+        """
+
+        # For the time being, these are fixed collections.
+        # To be modified in the future with mutable collections
+        cursor = self.conn.cursor()
+        query = 'select id from collection where id = %s'
+
+        logging.debug(query)
+        cursor.execute(query, (collID,))
+
+        coll = cursor.fetchone()
+        cursor.close()
+        if coll is None:
+            messDict = {'code': 0,
+                        'message': 'Collection ID %s not found' % collID
+                       }
+            message = json.dumps(messDict)
+
+            raise cherrypy.HTTPError(404, message)
+
+        return json.dumps(capabilitiesFixed)
 
     @cherrypy.expose
     def PUT(self, collID):

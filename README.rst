@@ -39,7 +39,7 @@ Collection API and the status of this implementation.
 /features                                          GET        Yes
 /collections                                       GET        Yes
 /collections                                       POST       Yes
-/collections/{id}                                  DELETE     Yes
+/collections/{id}                                  DELETE     No
 /collections/{id}                                  GET        Yes
 /collections/{id}                                  PUT        Yes
 /collections/{id}/capabilities                     GET        Yes
@@ -48,7 +48,7 @@ Collection API and the status of this implementation.
 /collections/{id}/members                          POST       Yes
 /collections/{id}/members/{id}                     DELETE     No
 /collections/{id}/members/{id}                     GET        Yes
-/collections/{id}/members/{id}                     PUT        Yes
+/collections/{id}/members/{id}                     PUT        Migrate
 /collections/{id}/members/{id}/properties/{prop}   DELETE     No
 /collections/{id}/members/{id}/properties/{prop}   GET        Yes
 /collections/{id}/members/{id}/properties/{prop}   PUT        No
