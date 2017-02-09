@@ -43,8 +43,7 @@ limit = 100
 capabilitiesFixed = {'isOrdered': False,
                      'supportRoles': False,
                      'membershipIsMutable': False,
-                     'metadataIsMutable': False
-                    }
+                     'metadataIsMutable': False}
 
 
 class MemberAPI(object):
@@ -60,7 +59,6 @@ class MemberAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         cursor = self.conn.cursor()
         query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
         query = query + 'join collection as c on m.cid = c.id '
@@ -86,9 +84,8 @@ class MemberAPI(object):
         cursor.close()
         if member is None:
             messDict = {'code': 0,
-                        'message': 'Member ID %s or Collection ID %s not found'\
-                         % (memberID, collID)
-                       }
+                        'message': 'Member %s or Collection %s not found'
+                        % (memberID, collID)}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
@@ -107,10 +104,9 @@ class MembersAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner join '
-        query = query + 'collection as c on m.cid = c.id '
+        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
+        query = query + 'join collection as c on m.cid = c.id '
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -134,7 +130,6 @@ class MembersAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         form = ''
         try:
             length = int(environ.get('CONTENT_LENGTH', '0'))
@@ -150,8 +145,6 @@ class MembersAPI(object):
         logging.debug('Text received with request:\n%s' % form)
 
         jsonColl = json.loads(form)
-
-        splitColl = environ['PATH_INFO'].strip('/').split('/')
 
         # Read only the fields that we support
         pid = jsonColl.get('pid', None)
@@ -173,19 +166,21 @@ class MembersAPI(object):
         if ((type(numColls) != tuple) or (numColls[0] != 1)):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID could not be found! (%s)' % collID
-                       }
+                        'message': 'Collection ID could not be found! (%s)'
+                        % collID}
             message = json.dumps(messDict)
             cursor.close()
             raise cherrypy.HTTPError(404, message)
 
-        query = 'insert into member (cid, pid, url, checksum) values (%s, %s, %s, %s)'
-        sqlParams = [cid, pid, url, checksum]
+        query = 'insert into member (cid, pid, url, checksum) values ' + \
+            '(%s, %s, %s, %s)'
+        sqlParams = [collID, pid, url, checksum]
         logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
         cursor.close()
-        raise cherrypy.HTTPError(201, 'Member %s added' % (pid if pid is not None else url))
+        raise cherrypy.HTTPError(201, 'Member %s added' %
+                                 (pid if pid is not None else url))
 
 
 class CollectionsAPI(object):
@@ -202,7 +197,6 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         cursor = self.conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -236,7 +230,6 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         form = ''
         try:
             length = int(environ.get('CONTENT_LENGTH', '0'))
@@ -249,9 +242,6 @@ class CollectionsAPI(object):
         else:
             form = environ['wsgi.input'].read()
 
-
-        logging.debug('Text received with request:\n%s' % form)
-
         jsonColl = json.loads(form)
 
         # Read only the fields that we support
@@ -261,9 +251,10 @@ class CollectionsAPI(object):
         # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
         query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) limit 1'
+        query = query + 'where not exists (select id from user where mail=%s) '
+        query = query + 'limit 1'
         sqlParams = [owner, owner]
-        logging.debug(query)
+
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
@@ -286,8 +277,7 @@ class CollectionsAPI(object):
         if ((type(numColls) != tuple) or numColls[0]):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection PID already exists! (%s)' % pid
-                       }
+                        'message': 'Collection PID already exists! (%s)' % pid}
             message = json.dumps(messDict)
             cursor.close()
             raise cherrypy.HTTPError(400, message)
@@ -298,6 +288,7 @@ class CollectionsAPI(object):
         self.conn.commit()
         cursor.close()
         raise cherrypy.HTTPError(201, 'Collection %s created' % str(pid))
+
 
 class CollectionAPI(object):
     def __init__(self, conn):
@@ -311,21 +302,18 @@ class CollectionAPI(object):
         :rtype: string
 
         """
-
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
         cursor = self.conn.cursor()
         query = 'select id from collection where id = %s'
 
-        logging.debug(query)
         cursor.execute(query, (collID,))
 
         coll = cursor.fetchone()
         cursor.close()
         if coll is None:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID
-                       }
+                        'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
 
             raise cherrypy.HTTPError(404, message)
@@ -340,7 +328,6 @@ class CollectionAPI(object):
         :rtype: string
 
         """
-
         # If there is a body to read
         if length != 0:
             form = environ['wsgi.input'].read(length)
@@ -353,12 +340,12 @@ class CollectionAPI(object):
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership']['owner'].strip()
-        cid = int(jsonColl['id'])
 
         # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
         query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) limit 1'
+        query = query + 'where not exists (select id from user where mail=%s) '
+        query = query + 'limit 1'
         sqlParams = [owner, owner]
 
         cursor.execute(query, tuple(sqlParams))
@@ -382,8 +369,7 @@ class CollectionAPI(object):
         if (numColls[0] != 1):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID not found! (%s)' % collID
-                       }
+                        'message': 'Collection ID not found! (%s)' % collID}
             message = json.dumps(messDict)
             cursor.close()
             raise cherrypy.HTTPError(404, message)
@@ -394,8 +380,8 @@ class CollectionAPI(object):
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select c.id, c.pid, mail, c.ts from collection as c inner join'
-        query = '%s user as u on c.owner = u.id' % query
+        query = 'select c.id, c.pid, mail, c.ts from collection as c inner '
+        query = query + 'join user as u on c.owner = u.id'
 
         whereClause = list()
 
@@ -413,7 +399,6 @@ class CollectionAPI(object):
         cursor.close()
 
         return Collection._make(coll).toJSON()
-
 
     @cherrypy.expose
     def GET(self, collID):
@@ -449,8 +434,7 @@ class CollectionAPI(object):
         cursor.close()
         if coll is None:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID
-                       }
+                        'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
@@ -479,19 +463,16 @@ class DataColl(object):
         self.colls = CollectionsAPI(self.conn)
 
     def _cp_dispatch(self, vpath):
-        queryStr = '/'.join(vpath)
-
         if len(vpath):
             if vpath[0] == "features":
                 return self
 
             if vpath[0] == "collections":
-                # Replace "collections" with the request method (e.g. GET, POST)
+                # Replace "collections" with the request method (e.g. GET, PUT)
                 vpath[0] = cherrypy.request.method
 
                 # If there are no more terms to process
                 if len(vpath) < 2:
-                    print vpath
                     return self.colls
 
                 # Remove the collection ID
@@ -516,7 +497,6 @@ class DataColl(object):
 
                         return self.members
 
-                print vpath
                 return self.coll
 
         return vpath
@@ -527,14 +507,15 @@ class DataColl(object):
 
         :returns: System capabilities in JSON format
         :rtype: string
-        """
 
+        """
         syscapab = {"pidProviderType": "",
                     "enforcesAccess": False,
                     "supportsPagination": False,
                     "ruleBasedGeneration": False,
                     "maxExpansionDepth": 0}
         return json.dumps(syscapab)
+
 
 if __name__ == "__main__":
     cherrypy.quickstart(DataColl(), '/rda/datacoll')
