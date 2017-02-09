@@ -215,11 +215,13 @@ class CollectionsAPI(object):
             whereClause.append('u.mail = %s')
             sqlParams.append(owner)
 
+        if len(whereClause):
+            query = query + ' where ' + ' and '.join(whereClause)
+
         if limit:
             query = query + ' limit %s'
             sqlParams.append(limit)
 
-        logging.debug(query)
         cursor.execute(query, tuple(sqlParams))
 
         # If no ID is given iterate through all collections in cursor

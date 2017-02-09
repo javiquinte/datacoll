@@ -30,11 +30,30 @@ generated. Follow the instructions in the next section to do it.
 RDA API vs this implementation
 ==============================
 
-/features OK
-/collections OK
-/collections/cID OK
+In the following table we summarize the requests specified in the RDA Data
+Collection API and the status of this implementation.
 
-... keep updating as new methods are implemented
+------------------------------------------------- -------- ------------- -----------------
+  Request                                          Method   Implemented   What's missing?
+------------------------------------------------- -------- ------------- -----------------
+/features                                          GET        Yes
+/collections                                       GET        Yes
+/collections                                       POST       Yes
+/collections/{id}                                  DELETE     Yes
+/collections/{id}                                  GET        Yes
+/collections/{id}                                  PUT        Yes
+/collections/{id}/capabilities                     GET        Yes
+/collections/{id}/ops/...                          ANY        No
+/collections/{id}/members                          GET        Yes
+/collections/{id}/members                          POST       Yes
+/collections/{id}/members/{id}                     DELETE     No
+/collections/{id}/members/{id}                     GET        Yes
+/collections/{id}/members/{id}                     PUT        Yes
+/collections/{id}/members/{id}/properties/{prop}   DELETE     No
+/collections/{id}/members/{id}/properties/{prop}   GET        Yes
+/collections/{id}/members/{id}/properties/{prop}   PUT        No
+------------------------------------------------- -------- ------------- -----------------
+
 
 Documentation
 =============
