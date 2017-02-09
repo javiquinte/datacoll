@@ -27,6 +27,15 @@ Installation
 The installation instructions are included in the package, but need first to be
 generated. Follow the instructions in the next section to do it.
 
+RDA API vs this implementation
+==============================
+
+/features OK
+/collections OK
+/collections/cID OK
+
+... keep updating as new methods are implemented
+
 Documentation
 =============
 
