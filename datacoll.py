@@ -435,14 +435,15 @@ class DataColl(object):
                     print vpath
                     return self.colls
 
+                # Remove the collection ID
                 cherrypy.request.params['collID'] = vpath.pop(1)
                 if len(vpath) > 1:
                     # Remove a word and check that is "members"
-                    auxTerm = vpath.pop(1)
-                    if auxTerm not in ("members", "capabilities"):
+                    if vpath[1] not in ("members", "capabilities"):
                         raise cherrypy.HTTPError(400, 'Bad Request')
 
-                    if auxTerm == "capabilities":
+                    if vpath[1] == "capabilities":
+                        vpath.pop(0)
                         return self.coll
 
                     if len(vpath) > 1:
