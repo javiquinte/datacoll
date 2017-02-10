@@ -33,19 +33,22 @@ RDA API vs this implementation
 In the following table we summarize the requests specified in the RDA Data
 Collection API and the status of this implementation.
 
+* In almost all cases if a wrong parameter is passed, the HTTP error should be
+400 and not 404.
+
 ================================================= ======== ============= =================
   Request                                          Method   Implemented   What's missing?
 ------------------------------------------------- -------- ------------- -----------------
 /features                                          GET        Yes
-/collections                                       GET        Yes
-/collections                                       POST       Yes
+/collections                                       GET        Yes        
+/collections                                       POST       Yes         Test
 /collections/{id}                                  DELETE     No
 /collections/{id}                                  GET        Yes
-/collections/{id}                                  PUT        Yes
+/collections/{id}                                  PUT        Yes         Test
 /collections/{id}/capabilities                     GET        Yes
 /collections/{id}/ops/...                          ANY        No
 /collections/{id}/members                          GET        Yes
-/collections/{id}/members                          POST       Yes
+/collections/{id}/members                          POST       Yes         Test
 /collections/{id}/members/{id}                     DELETE     No
 /collections/{id}/members/{id}                     GET        Yes
 /collections/{id}/members/{id}                     PUT        Migrate
