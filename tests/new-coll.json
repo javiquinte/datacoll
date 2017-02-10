@@ -1,0 +1,8 @@
+{
+    "pid": "some.pid",
+    "properties": {
+        "ownership": {
+            "owner": ["none@gfz-potsdam"]
+        }
+    }
+}

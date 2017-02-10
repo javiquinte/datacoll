@@ -27,7 +27,6 @@
 
 
 import cherrypy
-import configparser
 import logging
 import os
 import json
@@ -35,6 +34,11 @@ import MySQLdb
 from dcmysql import Collection
 from dcmysql import Member
 from dcmysql import CollJSONIter
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 # FIXME This is hardcoded but should be read from the configuration file
 limit = 100
@@ -105,6 +109,21 @@ class MembersAPI(object):
 
         """
         cursor = self.conn.cursor()
+        query = 'select id from collection where id = %s'
+
+        cursor.execute(query, (collID,))
+
+        coll = cursor.fetchone()
+        cursor.close()
+
+        if coll is None:
+            messDict = {'code': 0,
+                        'message': 'Collection ID %s not found' % collID}
+            message = json.dumps(messDict)
+
+            raise cherrypy.HTTPError(404, message)
+
+        cursor = self.conn.cursor()
         query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
         query = query + 'join collection as c on m.cid = c.id '
 
@@ -156,7 +175,7 @@ class MembersAPI(object):
 
         query = 'select count(*) from collection where id = %s'
         sqlParams = [collID]
-        logging.debug(query)
+
         cursor.execute(query, tuple(sqlParams))
 
         # FIXME Check the type of numColls!
@@ -189,7 +208,17 @@ class CollectionsAPI(object):
 
     # FIXME ! It is still not clear why here the handler looks for "index" and
     # not "GET".
-    @cherrypy.expose(['index'])
+    # @cherrypy.expose(['index'])
+
+    @cherrypy.expose
+    def default(self, **kwargs):
+        # print kwargs
+
+        toCall = getattr(self, cherrypy.request.method)
+        print toCall
+        return toCall()
+
+    @cherrypy.expose
     def GET(self, filter_by_owner=None):
         """Return a list of collections.
 
@@ -197,6 +226,8 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
+        # print 'bodyGET', cherrypy.request.body
+
         cursor = self.conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -222,7 +253,7 @@ class CollectionsAPI(object):
         return CollJSONIter(cursor, Collection)
 
     @cherrypy.expose
-    def POST(self):
+    def POST(self, body):
         """Create a new collection.
 
         :returns: An iterable object with a single collection or a collection
@@ -230,19 +261,11 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        form = ''
-        try:
-            length = int(environ.get('CONTENT_LENGTH', '0'))
-        except ValueError:
-            length = 0
+        print 'bodyPOST', cherrypy.request.body
 
-        # If there is a body to read
-        if length != 0:
-            form = environ['wsgi.input'].read(length)
-        else:
-            form = environ['wsgi.input'].read()
+        print kwargs.keys()[0]
 
-        jsonColl = json.loads(form)
+        jsonColl = json.loads(kwargs.keys()[0])
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership']['owner'].strip()
@@ -261,7 +284,7 @@ class CollectionsAPI(object):
         # Read the ID from user
         query = 'select id from user where mail = %s'
         sqlParams = [owner]
-        logging.debug(query)
+
         cursor.execute(query, tuple(sqlParams))
 
         # Read user ID
