@@ -305,8 +305,21 @@ class CollectionsAPI(object):
         sqlParams = [pid, uid]
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
+
+        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
+        query = query + 'user as u on c.owner = u.id where c.pid = %s'
+        print query % pid
+        cursor.execute(query, (pid,))
+
+        coll = cursor.fetchone()
+
         cursor.close()
-        raise cherrypy.HTTPError(201, 'Collection %s created' % str(pid))
+        # raise cherrypy.HTTPError(201, 'Collection %s created' % str(pid))
+        cherrypy.response.status = '201 Collection %s created' % str(pid)
+        cherrypy.response.header_list = [('Content-Type', 'application/json'), ('Content-Length', '0')]
+        # cherrypy.response.body = Collection._make(coll).toJSON()
+        cherrypy.response.body = ['']
+        return cherrypy.response
 
 
 class CollectionAPI(object):
@@ -441,7 +454,8 @@ class CollectionAPI(object):
         numb = cursor.fetchone()
         if numb[0] == 1:
             query = 'delete from collection where id = %s'
-            cursor.execute(query, tuple(collID))
+            print query % collID, type(collID)
+            cursor.execute(query, (collID, ))
             cursor.close()
             self.conn.commit()
 
