@@ -308,18 +308,15 @@ class CollectionsAPI(object):
 
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id where c.pid = %s'
-        print query % pid
         cursor.execute(query, (pid,))
 
         coll = cursor.fetchone()
 
         cursor.close()
-        # raise cherrypy.HTTPError(201, 'Collection %s created' % str(pid))
+
         cherrypy.response.status = '201 Collection %s created' % str(pid)
-        cherrypy.response.header_list = [('Content-Type', 'application/json'), ('Content-Length', '0')]
-        # cherrypy.response.body = Collection._make(coll).toJSON()
-        cherrypy.response.body = ['']
-        return cherrypy.response
+        cherrypy.response.header_list = [('Content-Type', 'application/json')]
+        return Collection._make(coll).toJSON()
 
 
 class CollectionAPI(object):
