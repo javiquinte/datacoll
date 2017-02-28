@@ -62,7 +62,7 @@ class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
                      'pid': self.pid,
                      'creation': self.ts,
                      'capabilities': capabilitiesFixed,
-                     'properties': {'ownership': {'owner': (self.mail)},
+                     'properties': {'ownership': self.mail,
                                     'license': '',
                                     'hasAccessRestrictions': False,
                                     'memberOf': ()
