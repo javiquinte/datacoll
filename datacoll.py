@@ -215,7 +215,6 @@ class CollectionsAPI(object):
         # print kwargs
 
         toCall = getattr(self, cherrypy.request.method)
-        print toCall
         return toCall()
 
     @cherrypy.expose
@@ -253,7 +252,7 @@ class CollectionsAPI(object):
         return CollJSONIter(cursor, Collection)
 
     @cherrypy.expose
-    def POST(self, body):
+    def POST(self):
         """Create a new collection.
 
         :returns: An iterable object with a single collection or a collection
@@ -261,14 +260,11 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        print 'bodyPOST', cherrypy.request.body
-
-        print kwargs.keys()[0]
-
-        jsonColl = json.loads(kwargs.keys()[0])
+        
+        jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
-        owner = jsonColl['properties']['ownership']['owner'].strip()
+        owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
 
         # Insert only if the user does not exist yet
