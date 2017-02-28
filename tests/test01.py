@@ -67,6 +67,16 @@ class DataCollTests(unittest.TestCase):
         except Exception as e:
             self.assertTrue(False, 'Error: %s' % e)
 
+        # Query the collection capabilities
+        req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
+        try:
+            u = urllib2.urlopen(req)
+            capab = json.loads(u.read())
+            # Check that the capabilities have at least the maxLength field
+            self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
+        except Exception as e:
+            self.assertTrue(False, 'Error: %s' % e)
+
         # Delete the collection
         req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
         req.get_method = lambda: 'DELETE'
