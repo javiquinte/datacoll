@@ -44,11 +44,15 @@ except ImportError:
 limit = 100
 # For the time being these are the capabilities for the immutable datasets
 # coming from the user requests.
-capabilitiesFixed = {'isOrdered': False,
-                     'supportRoles': False,
-                     'membershipIsMutable': False,
-                     'metadataIsMutable': False}
-
+capabilitiesFixed = {
+                      "isOrdered": False,
+                      "appendsToEnd": True,
+                      "supportsRoles": False,
+                      "membershipIsMutable": True,
+                      "metadataIsMutable": True,
+                      "restrictedToType": "string",
+                      "maxLength": -1
+                    }
 
 class MemberAPI(object):
     def __init__(self, conn):
