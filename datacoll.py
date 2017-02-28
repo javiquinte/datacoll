@@ -451,7 +451,6 @@ class CollectionAPI(object):
         numb = cursor.fetchone()
         if numb[0] == 1:
             query = 'delete from collection where id = %s'
-            print query % collID, type(collID)
             cursor.execute(query, (collID, ))
             cursor.close()
             self.conn.commit()

@@ -37,8 +37,8 @@ class DataCollTests(unittest.TestCase):
         "Setting up test"
         cls.host = host
 
-    def test_coll_create_delete(self):
-        "creation and deletion of a Collection"
+    def test_coll_create_query_delete(self):
+        "creation, query and deletion of a Collection"
 
 	with open('new-coll.json') as fin:
             data = fin.read()
@@ -48,11 +48,26 @@ class DataCollTests(unittest.TestCase):
         try:
             u = urllib2.urlopen(req)
             coll = json.loads(u.read())
-            # FIXME I skip the check of the 201 HTTP Error code but I shouldn't
+            # Check that I received a 201 code
             self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
         except Exception as e:
             self.assertTrue(False, 'Error: %s' % e)
 
+        # Query the collection to check it has been properly created
+        req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
+        try:
+            u = urllib2.urlopen(req)
+            coll2 = json.loads(u.read())
+            # Check that the ids are the same
+            self.assertEqual(coll['id'], coll2['id'], 'IDs differ!')
+            # Compare owner with the original one
+            self.assertEqual(json.loads(data)['properties']['ownership'],
+                             coll2['properties']['ownership'],
+                             'Owner recorded differ with the original one!')
+        except Exception as e:
+            self.assertTrue(False, 'Error: %s' % e)
+
+        # Delete the collection
         req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
         req.get_method = lambda: 'DELETE'
         u = urllib2.urlopen(req)
