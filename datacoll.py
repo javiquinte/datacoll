@@ -97,6 +97,7 @@ class MemberAPI(object):
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return Member._make(member).toJSON()
 
 
@@ -143,6 +144,7 @@ class MembersAPI(object):
 
         cursor.execute(query, sqlParams)
 
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return CollJSONIter(cursor, Member)
 
     def POST(self, collID):
@@ -253,6 +255,7 @@ class CollectionsAPI(object):
         cursor.execute(query, tuple(sqlParams))
 
         # If no ID is given iterate through all collections in cursor
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return CollJSONIter(cursor, Collection)
 
     @cherrypy.expose
@@ -319,7 +322,7 @@ class CollectionsAPI(object):
         cursor.close()
 
         cherrypy.response.status = '201 Collection %s created' % str(pid)
-        cherrypy.response.header_list = [('Content-Type', 'application/json')]
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return Collection._make(coll).toJSON()
 
 
@@ -351,6 +354,7 @@ class CollectionAPI(object):
 
             raise cherrypy.HTTPError(404, message)
 
+        cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return json.dumps(capabilitiesFixed)
 
     @cherrypy.expose
@@ -431,6 +435,7 @@ class CollectionAPI(object):
         coll = cursor.fetchone()
         cursor.close()
 
+        cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return Collection._make(coll).toJSON()
 
     @cherrypy.expose
@@ -513,6 +518,7 @@ class CollectionAPI(object):
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
+        cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return Collection._make(coll).toJSON()
 
 
@@ -584,11 +590,19 @@ class DataColl(object):
         :rtype: string
 
         """
-        syscapab = {"pidProviderType": "",
-                    "enforcesAccess": False,
-                    "supportsPagination": False,
-                    "ruleBasedGeneration": False,
-                    "maxExpansionDepth": 0}
+        syscapab = {
+                     "providesCollectionPids": False,
+                     "collectionPidProviderType": "string",
+                     "enforcesAccess": False,
+                     "supportsPagination": False,
+                     "asynchronousActions": False,
+                     "ruleBasedGeneration": True,
+                     "maxExpansionDepth": 4,
+                     "providesVersioning": False,
+                     "supportedCollectionOperations": [],
+                     "supportedModelTypes": []
+                   }
+        cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return json.dumps(syscapab)
 
 
