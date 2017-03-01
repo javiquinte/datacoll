@@ -55,6 +55,7 @@ Collection API and the status of this implementation.
 /collections/{id}/members/{id}/properties/{prop}   DELETE     No
 /collections/{id}/members/{id}/properties/{prop}   GET        Migrate
 /collections/{id}/members/{id}/properties/{prop}   PUT        No
+/collections/{id}/members/{id}/download            GET        Yes
 ================================================= ======== ============= =================
 
 
