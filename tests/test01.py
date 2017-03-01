@@ -37,6 +37,25 @@ class DataCollTests(unittest.TestCase):
         "Setting up test"
         cls.host = host
 
+    def test_features(self):
+        "'features' method of the system"
+
+        req = urllib2.Request('%s/features' % self.host)
+        # Create a collection
+        try:
+            u = urllib2.urlopen(req)
+            feat = json.loads(u.read())
+            # Check that providesCollectionPids is among the keys
+            self.assertTrue('providesCollectionPids' in feat.keys(),
+                            'providesCollectionPids not in features fields!')
+            # Check that ruleBasedGeneration is among the keys
+            self.assertTrue('ruleBasedGeneration' in feat.keys(),
+                            'ruleBasedGeneration not in features fields!')
+        except Exception as e:
+            self.assertTrue(False, 'Error: %s' % e)
+
+        return
+
     def test_coll_create_query_delete(self):
         "creation, query and deletion of a Collection"
 
