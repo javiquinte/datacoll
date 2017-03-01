@@ -106,7 +106,7 @@ class MemberAPI(object):
 	return ""
 
     @cherrypy.expose
-    def GET(self, collID, memberID):
+    def GET(self, collID, memberID, download=None):
         """Return a single collection member in JSON format.
 
         :returns: An iterable object with a single collection member in JSON
@@ -115,6 +115,7 @@ class MemberAPI(object):
 
         """
         cursor = self.conn.cursor()
+
         query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
         query = query + 'join collection as c on m.cid = c.id '
 
@@ -135,17 +136,28 @@ class MemberAPI(object):
 
         # Read one member because an ID is given. Check that there is
         # something to return (result set not empty)
-        member = cursor.fetchone()
+        memberDB = cursor.fetchone()
         cursor.close()
-        if member is None:
+        if memberDB is None:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberID, collID)}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Member._make(member).toJSON()
+        # Create an instance of the Member class
+        member = Member._make(memberDB)
+        if not download:
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            return member.toJSON()
+
+        # If the user wants to download the resource pointed by the member
+        if member.pid is not None:
+            url = 'http://hdl.handle.net/%s' % member.pid
+        else:
+            url = member.location
+
+        raise cherrypy.HTTPRedirect(url, status=301)
 
 
 class MembersAPI(object):
