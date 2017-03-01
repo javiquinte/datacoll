@@ -44,7 +44,7 @@ Collection API and the status of this implementation.
 /collections                                       POST       Yes
 /collections/{id}                                  DELETE     Yes
 /collections/{id}                                  GET        Yes
-/collections/{id}                                  PUT        Migrate
+/collections/{id}                                  PUT        Yes           Test
 /collections/{id}/capabilities                     GET        Yes
 /collections/{id}/ops/...                          ANY        No
 /collections/{id}/members                          GET        Yes
