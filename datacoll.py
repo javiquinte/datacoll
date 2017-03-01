@@ -159,6 +159,57 @@ class MemberAPI(object):
 
         raise cherrypy.HTTPRedirect(url, status=301)
 
+    @cherrypy.expose
+    def PUT(self, collID, memberID):
+        """Update an existing member.
+
+        :returns: An iterable object with the updated member.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+        jsonMemb = json.loads(cherrypy.request.body.fp.read())
+
+        # Read only the fields that we support
+        pid = jsonMemb.get('pid', None)
+        location = jsonMemb.get('location', None)
+        checksum = jsonMemb.get('checksum', None)
+
+        cursor = self.conn.cursor()
+        query = 'select count(*) from member where cid = %s and id = %s'
+        cursor.execute(query, (collID, memberID))
+
+        # FIXME Check the type of numMemb!
+        numMemb = cursor.fetchone()
+
+        if (numMemb[0] != 1):
+            # Send Error 404
+            msg = 'Member %s from Collection %s not found!'
+            messDict = {'code': 0,
+                        'message': msg % (memberID, collID)}
+            message = json.dumps(messDict)
+            cursor.close()
+            raise cherrypy.HTTPError(404, message)
+
+        query = 'update member set pid = %s , location = %s , checksum = %s '
+        query = query + 'where cid = %s and id = %s'
+        sqlParams = [pid, location, checksum, collID, memberID]
+        cursor.execute(query, tuple(sqlParams))
+        self.conn.commit()
+
+        # Read the member
+        query = 'select id, pid, location, checksum from member '
+        query = query + 'where cid = %s and id = %s'
+        sqlParams = [collID, memberID]
+
+        cursor.execute(query, tuple(sqlParams))
+
+        memb = cursor.fetchone()
+
+        cursor.close()
+
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return Member._make(memb).toJSON()
+
 
 class MembersAPI(object):
     def __init__(self, conn):
