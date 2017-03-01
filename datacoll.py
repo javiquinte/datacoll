@@ -59,6 +59,53 @@ class MemberAPI(object):
         self.conn = conn
 
     @cherrypy.expose
+    def DELETE(self, collID, memberID):
+        """Delete a single member from a collection."""
+        cursor = self.conn.cursor()
+        query = 'select count(id) from member'
+
+        whereClause = list()
+        sqlParams = list()
+
+        # Select usually the member related to this primary key
+        whereClause.append('cid = %s')
+        sqlParams.append(collID)
+
+        whereClause.append('id = %s')
+        sqlParams.append(memberID)
+
+        if len(whereClause):
+            query = query + ' where ' + ' and '.join(whereClause)
+
+        cursor.execute(query, tuple(sqlParams))
+
+        # Read how many collections I found. It should be 1 or 0.
+        numb = cursor.fetchone()
+        if numb[0] == 1:
+            query = 'delete from member where id = %s and cid = %s'
+            cursor.execute(query, (memberID, collID, ))
+            cursor.close()
+            self.conn.commit()
+
+        elif numb[0] == 0:
+            cursor.close()
+            msg = 'Member ID %s within collection ID %s not found'
+            messDict = {'code': 0,
+                        'message': msg % (memberID, collID)}
+            message = json.dumps(messDict)
+            raise cherrypy.HTTPError(404, message)
+
+        else:
+            cursor.close()
+            msg = 'Wrong data! Two or more records found with a key (%s, %s)'
+            messDict = {'code': 0,
+                        'message': msg % (collID, memberID)}
+            message = json.dumps(messDict)
+            raise cherrypy.HTTPError(404, message)
+
+	return ""
+
+    @cherrypy.expose
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
 
