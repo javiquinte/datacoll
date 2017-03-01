@@ -45,6 +45,8 @@ class DataCollTests(unittest.TestCase):
         try:
             u = urllib2.urlopen(req)
             feat = json.loads(u.read())
+            # Check that the error code is 200
+            self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
             # Check that providesCollectionPids is among the keys
             self.assertTrue('providesCollectionPids' in feat.keys(),
                             'providesCollectionPids not in features fields!')
@@ -92,6 +94,8 @@ class DataCollTests(unittest.TestCase):
         try:
             u = urllib2.urlopen(req)
             memb2 = json.loads(u.read())
+            # Check that error code is 200
+            self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
             # Check that the ids are the same
             self.assertEqual(memb['id'], memb2['id'], 'IDs differ!')
             # Compare owner with the original one
@@ -116,13 +120,13 @@ class DataCollTests(unittest.TestCase):
                               (self.host, coll['id'], memb['id']))
         req.get_method = lambda: 'DELETE'
         u = urllib2.urlopen(req)
-        self.assertEqual(u.getcode(), 200)
+        self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
 
         # Delete the collection
         req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
         req.get_method = lambda: 'DELETE'
         u = urllib2.urlopen(req)
-        self.assertEqual(u.getcode(), 200)
+        self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
         return
 
     def test_coll_create_query_delete(self):
@@ -146,6 +150,8 @@ class DataCollTests(unittest.TestCase):
         try:
             u = urllib2.urlopen(req)
             coll2 = json.loads(u.read())
+            # Check that I received a 200 code
+            self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
             # Check that the ids are the same
             self.assertEqual(coll['id'], coll2['id'], 'IDs differ!')
             # Compare owner with the original one
@@ -160,6 +166,8 @@ class DataCollTests(unittest.TestCase):
         try:
             u = urllib2.urlopen(req)
             capab = json.loads(u.read())
+            # Check that I received a 200 code
+            self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
             # Check that the capabilities have at least the maxLength field
             self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
         except Exception as e:
@@ -169,7 +177,8 @@ class DataCollTests(unittest.TestCase):
         req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
         req.get_method = lambda: 'DELETE'
         u = urllib2.urlopen(req)
-        self.assertEqual(u.getcode(), 200)
+        # Check that I received a 200 code
+        self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
         return
 
 global host
