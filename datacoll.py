@@ -147,6 +147,7 @@ class MembersAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return CollJSONIter(cursor, Member)
 
+    @cherrypy.expose
     def POST(self, collID):
         """Add a new member.
 
@@ -155,57 +156,56 @@ class MembersAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        form = ''
-        try:
-            length = int(environ.get('CONTENT_LENGTH', '0'))
-        except ValueError:
-            length = 0
-
-        # If there is a body to read
-        if length != 0:
-            form = environ['wsgi.input'].read(length)
-        else:
-            form = environ['wsgi.input'].read()
-
-        logging.debug('Text received with request:\n%s' % form)
-
-        jsonColl = json.loads(form)
+        jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
-        pid = jsonColl.get('pid', None)
-        url = jsonColl.get('url', None)
-        checksum = jsonColl['checksum'].strip()
+        pid = jsonMemb.get('pid', None)
+        location = jsonMemb.get('location', None)
+        checksum = jsonMemb.get('checksum', None)
 
-        # Insert only if the user does not exist yet
         cursor = self.conn.cursor()
+        query = 'select count(*) from member where pid = %s'
+        cursor.execute(query, (pid,))
 
-        query = 'select count(*) from collection where id = %s'
-        sqlParams = [collID]
+        # FIXME Check the type of numMemb!
+        numMemb = cursor.fetchone()
 
-        cursor.execute(query, tuple(sqlParams))
-
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-        logging.debug('Collections found: %s' % numColls)
-
-        if ((type(numColls) != tuple) or (numColls[0] != 1)):
+        if ((type(numMemb) != tuple) or numMemb[0]):
             # Send Error 400
             messDict = {'code': 0,
-                        'message': 'Collection ID could not be found! (%s)'
-                        % collID}
+                        'message': 'Member PID already exists! (%s)' % pid}
             message = json.dumps(messDict)
             cursor.close()
-            raise cherrypy.HTTPError(404, message)
+            raise cherrypy.HTTPError(400, message)
 
-        query = 'insert into member (cid, pid, url, checksum) values ' + \
-            '(%s, %s, %s, %s)'
-        sqlParams = [collID, pid, url, checksum]
-        logging.debug(query)
+        query = 'insert into member (cid, pid, url, checksum) values (%s, %s, %s, %s)'
+        sqlParams = [collID, pid, location, checksum]
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
+
+        # Read the member
+        query = 'select id, pid, url, checksum from member where cid = %s and '
+        sqlParams = [collID]
+
+        if pid is not None:
+            query = query + 'pid = %s'
+            sqlParams.append(pid)
+        elif location is not None:
+            query = query + 'url = %s'
+            sqlParams.append(location)
+        else:
+            msg = 'Either pid or location should have a valid non empty value.'
+            cherrypy.HTTPError(400, msg)
+
+        cursor.execute(query, tuple(sqlParams))
+
+        memb = cursor.fetchone()
+
         cursor.close()
-        raise cherrypy.HTTPError(201, 'Member %s added' %
-                                 (pid if pid is not None else url))
+
+        cherrypy.response.status = '201 Member created (%s)' % (pid if pid is not None else location)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return Member._make(memb).toJSON()
 
 
 class CollectionsAPI(object):
