@@ -418,27 +418,36 @@ class CollectionAPI(object):
 
     @cherrypy.expose
     def PUT(self, collID):
-        """Update a collection.
+        """Update an existing collection.
 
-        :returns: An iterable object with a single collection in JSON format.
-        :rtype: string
+        :returns: An iterable object with the updated collection.
+        :rtype: :class:`~CollJSONIter`
 
         """
-        # If there is a body to read
-        if length != 0:
-            form = environ['wsgi.input'].read(length)
-        else:
-            form = environ['wsgi.input'].read()
+        
+        jsonColl = json.loads(cherrypy.request.body.fp.read())
 
-        logging.debug('Text received with request:\n%s' % form)
+        cursor = self.conn.cursor()
 
-        jsonColl = json.loads(form)
+        query = 'select count(*) from collection where id = %s'
+        cursor.execute(query, (collID,))
+
+        # FIXME Check the type of numColls!
+        numColls = cursor.fetchone()
+
+        if (numColls[0] != 1):
+            # Send Error 404
+            messDict = {'code': 0,
+                        'message': 'Collection %s not found!' % pid}
+            message = json.dumps(messDict)
+            cursor.close()
+            raise cherrypy.HTTPError(404, message)
 
         # Read only the fields that we support
-        owner = jsonColl['properties']['ownership']['owner'].strip()
+        owner = jsonColl['properties']['ownership'].strip()
+        pid = jsonColl['pid'].strip()
 
         # Insert only if the user does not exist yet
-        cursor = self.conn.cursor()
         query = 'insert into user (mail) select * from (select %s) as tmp '
         query = query + 'where not exists (select id from user where mail=%s) '
         query = query + 'limit 1'
@@ -456,45 +465,20 @@ class CollectionAPI(object):
         # Read user ID
         uid = cursor.fetchone()[0]
 
-        query = 'select count(*) from collection where id = %s'
-
-        cursor.execute(query, (collID,))
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-
-        if (numColls[0] != 1):
-            # Send Error 400
-            messDict = {'code': 0,
-                        'message': 'Collection ID not found! (%s)' % collID}
-            message = json.dumps(messDict)
-            cursor.close()
-            raise cherrypy.HTTPError(404, message)
-
-        query = 'update collection set owner=%s, ts=DEFAULT where id=%s'
-        sqlParams = [uid, collID]
-
+        query = 'update collection set pid = %s, owner = %s, ts=DEFAULT where id = %s'
+        sqlParams = [pid, uid, collID]
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select c.id, c.pid, mail, c.ts from collection as c inner '
-        query = query + 'join user as u on c.owner = u.id'
-
-        whereClause = list()
-
-        whereClause.append('c.id = %s')
-
-        if len(whereClause):
-            query = '%s where %s' % (query, ' and '.join(whereClause))
-
-        if limit:
-            query = '%s limit %s' % (query, limit)
-
+        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
+        query = query + 'user as u on c.owner = u.id where c.id = %s'
         cursor.execute(query, (collID,))
 
         coll = cursor.fetchone()
+
         cursor.close()
 
-        cherrypy.response.header_list = [('Content-Type', 'application/json')]
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return Collection._make(coll).toJSON()
 
     @cherrypy.expose
