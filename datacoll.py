@@ -115,7 +115,7 @@ class MemberAPI(object):
 
         """
         cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
         query = query + 'join collection as c on m.cid = c.id '
 
         whereClause = list()
@@ -176,7 +176,7 @@ class MembersAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.url, m.checksum from member as m inner '
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
         query = query + 'join collection as c on m.cid = c.id '
 
         whereClause = list()
@@ -225,20 +225,20 @@ class MembersAPI(object):
             cursor.close()
             raise cherrypy.HTTPError(400, message)
 
-        query = 'insert into member (cid, pid, url, checksum) values (%s, %s, %s, %s)'
+        query = 'insert into member (cid, pid, location, checksum) values (%s, %s, %s, %s)'
         sqlParams = [collID, pid, location, checksum]
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the member
-        query = 'select id, pid, url, checksum from member where cid = %s and '
+        query = 'select id, pid, location, checksum from member where cid = %s and '
         sqlParams = [collID]
 
         if pid is not None:
             query = query + 'pid = %s'
             sqlParams.append(pid)
         elif location is not None:
-            query = query + 'url = %s'
+            query = query + 'location = %s'
             sqlParams.append(location)
         else:
             msg = 'Either pid or location should have a valid non empty value.'
