@@ -41,15 +41,15 @@ Collection API and the status of this implementation.
 ------------------------------------------------- -------- ------------- -----------------
 /features                                          GET        Yes
 /collections                                       GET        Yes        
-/collections                                       POST       Yes         Test
-/collections/{id}                                  DELETE     No
+/collections                                       POST       Yes
+/collections/{id}                                  DELETE     Yes
 /collections/{id}                                  GET        Yes
-/collections/{id}                                  PUT        Yes         Test
+/collections/{id}                                  PUT        Migrate
 /collections/{id}/capabilities                     GET        Yes
 /collections/{id}/ops/...                          ANY        No
 /collections/{id}/members                          GET        Yes
-/collections/{id}/members                          POST       Yes         Test
-/collections/{id}/members/{id}                     DELETE     No
+/collections/{id}/members                          POST       Yes
+/collections/{id}/members/{id}                     DELETE     Yes
 /collections/{id}/members/{id}                     GET        Yes
 /collections/{id}/members/{id}                     PUT        Migrate
 /collections/{id}/members/{id}/properties/{prop}   DELETE     No
