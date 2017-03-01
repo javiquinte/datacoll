@@ -71,13 +71,13 @@ class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
         return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
-class Member(namedtuple('Member', ['id', 'pid', 'url', 'checksum'])):
+class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum'])):
     """Namedtuple representing a :class:`~Member` of a :class:`~Collection`.
 
     It includes methods to to return the JSON version of the member.
        id: int identifying the member
        pid: a global PID resolvable via handle.net
-       url: a URL where the data can be download
+       location: a URL where the data can be download
        checksum: checksum of the data to check its validity
 
     :platform: Any
@@ -95,7 +95,7 @@ class Member(namedtuple('Member', ['id', 'pid', 'url', 'checksum'])):
         # FIXME Capabilities should be centralized in the top part of the file
         interVar = ({'id': self.id,
                      'pid': self.pid,
-                     'url': self.url,
+                     'location': self.location,
                      'checksum': self.checksum
                     })
         return json.dumps(interVar)
