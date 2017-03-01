@@ -633,6 +633,9 @@ class DataColl(object):
                         # Check if there are more parameters
                         if len(vpath) > 1:
                             cherrypy.request.params['memberID'] = vpath.pop(1)
+                            if (len(vpath) > 1) and (vpath[1] == "download"):
+                                vpath.pop(1)
+                                cherrypy.request.params['download'] = 1
                             return self.member
 
                         return self.members
