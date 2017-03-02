@@ -34,6 +34,7 @@ import MySQLdb
 from dcmysql import Collection
 from dcmysql import Member
 from dcmysql import CollJSONIter
+from dcmysql import urlFile
 
 try:
     import configparser
@@ -108,7 +109,62 @@ class MemberAPI(object):
 	return ""
 
     @cherrypy.expose
-    def GET(self, collID, memberID, download=None):
+    def download(self, collID, memberID):
+        """Download a single collection member in JSON format.
+
+        :returns: An iterable object with a single collection member in JSON
+                  format.
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+        cursor = self.conn.cursor()
+
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
+        query = query + 'join collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        whereClause.append('m.id = %s')
+        sqlParams.append(memberID)
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        memberDB = cursor.fetchone()
+        cursor.close()
+        if memberDB is None:
+            messDict = {'code': 0,
+                        'message': 'Member %s or Collection %s not found'
+                        % (memberID, collID)}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(404, message)
+
+        # Create an instance of the Member class
+        member = Member._make(memberDB)
+
+        # If the user wants to download the resource pointed by the member
+        if member.pid is not None:
+            url = 'http://hdl.handle.net/%s' % member.pid
+        else:
+            url = member.location
+
+        cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+        return urlFile(url)
+
+    download._cp_config = {'response.stream': True}
+        
+    @cherrypy.expose
+    def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
 
         :returns: An iterable object with a single collection member in JSON
@@ -150,17 +206,8 @@ class MemberAPI(object):
 
         # Create an instance of the Member class
         member = Member._make(memberDB)
-        if not download:
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            return member.toJSON()
-
-        # If the user wants to download the resource pointed by the member
-        if member.pid is not None:
-            url = 'http://hdl.handle.net/%s' % member.pid
-        else:
-            url = member.location
-
-        raise cherrypy.HTTPRedirect(url, status=301)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return member.toJSON()
 
     @cherrypy.expose
     def PUT(self, collID, memberID):
@@ -632,7 +679,7 @@ class CollectionAPI(object):
         return ""
 
     @cherrypy.expose
-    def GET(self, collID):
+    def GET(self, collID, download=0):
         """Return a single collection.
 
         :returns: An iterable object with a single collection in JSON format.
@@ -669,8 +716,17 @@ class CollectionAPI(object):
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        cherrypy.response.header_list = [('Content-Type', 'application/json')]
-        return Collection._make(coll).toJSON()
+        if not download:
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            return Collection._make(coll).toJSON()
+
+        # If the user wants to download the resource pointed by the member
+        if member.pid is not None:
+            url = 'http://hdl.handle.net/%s' % member.pid
+        else:
+            url = member.location
+
+        raise cherrypy.HTTPRedirect(url, status=301)
 
 
 class DataColl(object):
@@ -726,8 +782,7 @@ class DataColl(object):
                         if len(vpath) > 1:
                             cherrypy.request.params['memberID'] = vpath.pop(1)
                             if (len(vpath) > 1) and (vpath[1] == "download"):
-                                vpath.pop(1)
-                                cherrypy.request.params['download'] = 1
+                                vpath.pop(0)
                             return self.member
 
                         return self.members

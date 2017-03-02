@@ -24,6 +24,7 @@ import logging
 import json
 import datetime
 import configparser
+import urllib2 as ul
 import cgi
 import MySQLdb
 from collections import namedtuple
@@ -35,6 +36,28 @@ capabilitiesFixed = {'isOrdered': False,
                      'membershipIsMutable': False,
                      'metadataIsMutable': False
                     }
+
+
+class urlFile(object):
+    def __init__(self, url):
+        self.url = url
+
+    def __iter__(self):
+        blockSize = 1024 * 1024
+
+        req = ul.Request(self.url)
+        try:
+            u = ul.urlopen(req)
+            buf = u.read(blockSize)
+            while len(buf):
+                # Read first block of data
+                yield buf
+                buf = u.read(blockSize)
+        except Exception as e:
+            logging.error('Exception %s' % str(e))
+
+        raise StopIteration
+
 
 class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
     """Namedtuple representing a :class:`~Collection`.
