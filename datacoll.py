@@ -173,7 +173,10 @@ class MemberAPI(object):
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
         checksum = jsonMemb.get('checksum', None)
+        index = jsonMemb.get('mapping', {}).get('index', None)
 
+        # FIXME We need to check here if memberID and index are exactly the
+        # the same or if we need to update it
         cursor = self.conn.cursor()
         query = 'select count(*) from member where cid = %s and id = %s'
         cursor.execute(query, (collID, memberID))
@@ -272,25 +275,52 @@ class MembersAPI(object):
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
         checksum = jsonMemb.get('checksum', None)
+        index = jsonMemb.get('mappings', {}).get('index', None)
+
+        if ((pid is None) and (location is None)):
+            msg = 'Either pid or location should have a valid non empty value.'
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         cursor = self.conn.cursor()
-        query = 'select count(*) from member where pid = %s'
-        cursor.execute(query, (pid,))
+        query = 'select count(*) from collection where id = %s'
+        cursor.execute(query, (collID,))
 
         # FIXME Check the type of numMemb!
         numMemb = cursor.fetchone()
 
-        if ((type(numMemb) != tuple) or numMemb[0]):
-            # Send Error 400
+        if (numMemb[0] != 1):
+            # Send Error 404
             messDict = {'code': 0,
-                        'message': 'Member PID already exists! (%s)' % pid}
+                        'message': 'Collection %s not found!' % collID}
             message = json.dumps(messDict)
             cursor.close()
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(404, message)
+
+        query = 'insert into member (cid, pid, location, checksum, id) '
+        if index is None:
+            query = query + 'select %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
+            sqlParams = [collID, pid, location, checksum, collID]
+        else:
+            query = query + 'values (%s, %s, %s, %s, %s)'
+            sqlParams = [collID, pid, location, checksum, index]
+
+        try:
+            cursor.execute(query, tuple(sqlParams))
+        except:
+            self.conn.commit()
+            msg = 'Creation of member raised an error. Was it already present?'
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cursor.close()
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
-        query = 'insert into member (cid, pid, location, checksum) values (%s, %s, %s, %s)'
-        sqlParams = [collID, pid, location, checksum]
-        cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the member
@@ -305,7 +335,12 @@ class MembersAPI(object):
             sqlParams.append(location)
         else:
             msg = 'Either pid or location should have a valid non empty value.'
-            cherrypy.HTTPError(400, msg)
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cursor.close()
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, msg)
 
         cursor.execute(query, tuple(sqlParams))
 
