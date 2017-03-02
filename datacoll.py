@@ -93,6 +93,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': msg % (memberID, collID)}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         else:
@@ -101,6 +102,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': msg % (collID, memberID)}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
 	return ""
@@ -143,6 +145,7 @@ class MemberAPI(object):
                         'message': 'Member %s or Collection %s not found'
                         % (memberID, collID)}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # Create an instance of the Member class
@@ -173,15 +176,15 @@ class MemberAPI(object):
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
         checksum = jsonMemb.get('checksum', None)
-        index = jsonMemb.get('mapping', {}).get('index', None)
+        index = jsonMemb.get('mappings', {}).get('index', None)
 
         # FIXME We need to check here if memberID and index are exactly the
         # the same or if we need to update it
         cursor = self.conn.cursor()
+        # Check that the member exists!
         query = 'select count(*) from member where cid = %s and id = %s'
         cursor.execute(query, (collID, memberID))
 
-        # FIXME Check the type of numMemb!
         numMemb = cursor.fetchone()
 
         if (numMemb[0] != 1):
@@ -191,18 +194,37 @@ class MemberAPI(object):
                         'message': msg % (memberID, collID)}
             message = json.dumps(messDict)
             cursor.close()
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        query = 'update member set pid = %s , location = %s , checksum = %s '
+        # Check that the index does not collide with existent IDs
+        if index != memberID:
+            query = 'select count(*) from member where cid = %s and id = %s'
+            cursor.execute(query, (collID, index))
+
+            numMemb = cursor.fetchone()
+
+            if (numMemb[0] != 0):
+                # Send Error 400
+                msg = 'Index %s is already used for Collection %s !'
+                messDict = {'code': 0,
+                            'message': msg % (index, collID)}
+                message = json.dumps(messDict)
+                cursor.close()
+                cherrypy.response.headers['Content-Type'] = 'application/json'
+                raise cherrypy.HTTPError(400, message)
+
+        query = 'update member set pid = %s , location = %s , checksum = %s , id = %s '
         query = query + 'where cid = %s and id = %s'
-        sqlParams = [pid, location, checksum, collID, memberID]
+        sqlParams = [pid, location, checksum, index, collID, memberID]
+
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
         # Read the member
         query = 'select id, pid, location, checksum from member '
         query = query + 'where cid = %s and id = %s'
-        sqlParams = [collID, memberID]
+        sqlParams = [collID, index]
 
         cursor.execute(query, tuple(sqlParams))
 

@@ -96,7 +96,8 @@ class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum'])):
         interVar = ({'id': self.id,
                      'pid': self.pid,
                      'location': self.location,
-                     'checksum': self.checksum
+                     'checksum': self.checksum,
+                     'mappings': {'index': self.id}
                     })
         return json.dumps(interVar)
 
