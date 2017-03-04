@@ -1,0 +1,12 @@
+[Service]
+# Verbosity of the logging system
+# Possible values are:
+# CRITICAL, ERROR, WARNING, INFO, DEBUG
+verbosity = INFO
+
+[iRODS]
+host = irods.domain.com
+user = http
+password = httppass
+zone = myZone
+port = 1247
