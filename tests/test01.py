@@ -41,7 +41,7 @@ class DataCollTests(unittest.TestCase):
         "'features' method of the system"
 
         req = urllib2.Request('%s/features' % self.host)
-        # Create a collection
+        # Call the features method
         try:
             u = urllib2.urlopen(req)
             feat = json.loads(u.read())

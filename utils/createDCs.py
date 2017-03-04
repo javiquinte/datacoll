@@ -16,9 +16,52 @@ root = '/geofonBak/archive'
 i = irodsInterface.irodsInterface('irods.cfg')
 i.connect()
 
-def createColl(iRODSDir):
-    print 'Creating collection for %s' % iRODSDir
-    ul.Request(dcUrl + '/features')
+def createColl(name):
+    """Create a collection with the given name.
+    
+    Return either the collection or an error message (both in json format).
+    """
+    print 'Creating collection with name = %s' % name
+
+    jsonColl = {
+        "pid": name,
+        "properties": {
+            "ownership": "geofon@gfz-potsdam.de"
+        }
+    }
+
+    req = ul.Request('%s/collections' % dcUrl, data=jsonColl)
+    req.add_header("Content-Type",'application/json')
+    # Create a collection
+    try:
+        u = ul.urlopen(req)
+        return json.loads(u.read())
+    except Exception as e:
+        return json.loads({'message': 'Error creating collection'})
+
+
+def createMember(collID, do):
+    """Create a member in a collection based on the given DataObject.
+    
+    Return either the member or an error message (both in json format).
+    """
+    print 'Creating member with name = %s' % do.name
+
+    jsonMember = {"location": "http://localhost:8000/eudat/b2http" + \
+                  do.path + '/' + do.name,
+                  "checksum": do.checksum
+                 }
+
+    req = ul.Request('%s/collections/%d/members' %
+                     (dcUrl, collID, data=jsonMember)
+    req.add_header("Content-Type",'application/json')
+    # Create a member
+    try:
+        u = ul.urlopen(req)
+        return json.loads(u.read())
+    except Exception as e:
+        return json.loads({'message': 'Error creating collection'})
+
 
 for yc in i.listDir(root).subcollections:
     if yc.name not in years:
@@ -35,4 +78,7 @@ for yc in i.listDir(root).subcollections:
             for cc in sc.subcollections:
                 if cc.name not in channels:
                     continue
-                createColl(cc)
+                jsonColl = createColl('%s.%s.*.%s.%s' % (nc.name, sc.name,
+                                                         cc.name, yc.name))
+                for f in cc.data_objects:
+                    createMember(jsonColl['id'], f)
