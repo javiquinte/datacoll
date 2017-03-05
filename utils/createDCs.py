@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import irodsInterface
 from irods.models import DataObject
 from irods.models import Collection
@@ -30,14 +31,14 @@ def createColl(name):
         }
     }
 
-    req = ul.Request('%s/collections' % dcUrl, data=jsonColl)
+    req = ul.Request('%s/collections' % dcUrl, data=json.dumps(jsonColl))
     req.add_header("Content-Type",'application/json')
     # Create a collection
     try:
         u = ul.urlopen(req)
         return json.loads(u.read())
     except Exception as e:
-        return json.loads({'message': 'Error creating collection'})
+        return {'message': 'Error creating collection'}
 
 
 def createMember(collID, do):
@@ -47,20 +48,20 @@ def createMember(collID, do):
     """
     print 'Creating member with name = %s' % do.name
 
-    jsonMember = {"location": "http://localhost:8000/eudat/b2http" + \
-                  do.path + '/' + do.name,
+    jsonMember = {"location": "http://localhost:8000/api/registered" + \
+                  do.path + "?download=true",
                   "checksum": do.checksum
                  }
 
     req = ul.Request('%s/collections/%d/members' %
-                     (dcUrl, collID, data=jsonMember)
+                     (dcUrl, collID), data=json.dumps(jsonMember))
     req.add_header("Content-Type",'application/json')
     # Create a member
     try:
         u = ul.urlopen(req)
         return json.loads(u.read())
     except Exception as e:
-        return json.loads({'message': 'Error creating collection'})
+        return {'message': 'Error creating member'}
 
 
 for yc in i.listDir(root).subcollections:
