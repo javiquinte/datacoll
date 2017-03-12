@@ -545,6 +545,49 @@ class CollectionAPI(object):
         self.conn = conn
 
     @cherrypy.expose
+    def download(self, collID):
+        """Download a complete collection.
+
+        :returns: A binary stream representing the complete collection
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+        cursor = self.conn.cursor()
+
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
+        query = query + 'join collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+        memberDB = cursor.fetchone()
+        while memberDB:
+            # Create an instance of the Member class
+            member = Member._make(memberDB)
+
+            # If the user wants to download the resource pointed by the member
+            if member.pid is not None:
+                url = 'http://hdl.handle.net/%s' % member.pid
+            else:
+                url = member.location
+
+            yield urlFile(url)
+
+    download._cp_config = {'response.stream': True}
+        
+    @cherrypy.expose
     def capabilities(self, collID):
         """Return the capabilities of a collection.
 
@@ -786,6 +829,10 @@ class DataColl(object):
                             return self.member
 
                         return self.members
+
+                    if vpath[1] == "download":
+                        vpath.pop(0)
+                        return self.coll
 
                 return self.coll
 
