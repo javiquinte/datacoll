@@ -8,8 +8,8 @@ import urllib2 as ul
 
 years = ['1993']
 nets = ['GE']
-channels = ['BHZ.D']
-stations = ['DSB']
+stations = ['DSB', 'MORC', 'PMG']
+channels = ['BHN.D','BHE.D',  'BHZ.D', 'HHN.D', 'HHE.D', 'HHZ.D']
 
 dcUrl = 'http://localhost:8080/rda/datacoll'
 
@@ -81,5 +81,14 @@ for yc in i.listDir(root).subcollections:
                     continue
                 jsonColl = createColl('%s.%s.*.%s.%s' % (nc.name, sc.name,
                                                          cc.name, yc.name))
+
+                if 'message' in jsonColl.keys():
+                    print str(jsonColl)
+
                 for f in cc.data_objects:
-                    createMember(jsonColl['id'], f)
+                    if f.name.startswith(nc.name + '.' + sc.name + '.'):
+                        try:
+                            int(f.name[-3])
+                            createMember(jsonColl['id'], f)
+                        except:
+                            continue
