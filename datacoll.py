@@ -162,7 +162,7 @@ class MemberAPI(object):
         return urlFile(url)
 
     download._cp_config = {'response.stream': True}
-        
+
     @cherrypy.expose
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
@@ -481,7 +481,7 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        
+
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -583,10 +583,12 @@ class CollectionAPI(object):
             else:
                 url = member.location
 
-            yield urlFile(url)
+            for buf in urlFile(url):
+                yield buf
+            memberDB = cursor.fetchone()
 
     download._cp_config = {'response.stream': True}
-        
+
     @cherrypy.expose
     def capabilities(self, collID):
         """Return the capabilities of a collection.
@@ -622,7 +624,7 @@ class CollectionAPI(object):
         :rtype: :class:`~CollJSONIter`
 
         """
-        
+
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         cursor = self.conn.cursor()
@@ -722,7 +724,7 @@ class CollectionAPI(object):
         return ""
 
     @cherrypy.expose
-    def GET(self, collID, download=0):
+    def GET(self, collID):
         """Return a single collection.
 
         :returns: An iterable object with a single collection in JSON format.
@@ -810,7 +812,7 @@ class DataColl(object):
                 cherrypy.request.params['collID'] = vpath.pop(1)
                 if len(vpath) > 1:
                     # Remove a word and check that is "members"
-                    if vpath[1] not in ("members", "capabilities"):
+                    if vpath[1] not in ("members", "capabilities", "download"):
                         raise cherrypy.HTTPError(400, 'Bad Request')
 
                     if vpath[1] == "capabilities":
