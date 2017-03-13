@@ -41,6 +41,8 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+version = '0.1b1'
+
 # FIXME This is hardcoded but should be read from the configuration file
 limit = 100
 # For the time being these are the capabilities for the immutable datasets
@@ -797,7 +799,7 @@ class DataColl(object):
 
     def _cp_dispatch(self, vpath):
         if len(vpath):
-            if vpath[0] == "features":
+            if vpath[0] in ("features", "version"):
                 return self
 
             if vpath[0] == "collections":
@@ -862,6 +864,17 @@ class DataColl(object):
                    }
         cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return json.dumps(syscapab)
+
+    @cherrypy.expose
+    def version(self):
+        """Return the version of this implementation.
+
+        :returns: System capabilities in JSON format
+        :rtype: string
+
+        """
+        cherrypy.response.header_list = [('Content-Type', 'text/plain')]
+        return version
 
 
 if __name__ == "__main__":
