@@ -108,7 +108,7 @@ class MemberAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-	return ""
+	    return ""
 
     @cherrypy.expose
     def download(self, collID, memberID):
@@ -225,10 +225,11 @@ class MemberAPI(object):
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
         checksum = jsonMemb.get('checksum', None)
+        datatype = jsonMemb.get('datatype', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        # FIXME We need to check here if memberID and index are exactly the
-        # the same or if we need to update it
+        # FIXME We need to check here the datatype by querying the collection
+        # and comparing with the restrictedToType attribute
         cursor = self.conn.cursor()
         # Check that the member exists!
         query = 'select count(*) from member where cid = %s and id = %s'
@@ -345,6 +346,7 @@ class MembersAPI(object):
         # Read only the fields that we support
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
+        datatype = jsonMemb.get('datatype', None)
         checksum = jsonMemb.get('checksum', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
@@ -360,7 +362,6 @@ class MembersAPI(object):
         query = 'select count(*) from collection where id = %s'
         cursor.execute(query, (collID,))
 
-        # FIXME Check the type of numMemb!
         numMemb = cursor.fetchone()
 
         if (numMemb[0] != 1):
@@ -372,6 +373,8 @@ class MembersAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
+        # FIXME Here we need to set also the datatype after checking the
+        # restrictedToType attribute in the collection
         query = 'insert into member (cid, pid, location, checksum, id) '
         if index is None:
             query = query + 'select %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
@@ -447,8 +450,6 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        # print 'bodyGET', cherrypy.request.body
-
         cursor = self.conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -478,8 +479,7 @@ class CollectionsAPI(object):
     def POST(self):
         """Create a new collection.
 
-        :returns: An iterable object with a single collection or a collection
-            list in JSON format.
+        :returns: An iterable object with a single collection in JSON format.
         :rtype: string or :class:`~CollJSONIter`
 
         """
@@ -626,7 +626,6 @@ class CollectionAPI(object):
         :rtype: :class:`~CollJSONIter`
 
         """
-
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         cursor = self.conn.cursor()

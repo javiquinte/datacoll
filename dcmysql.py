@@ -29,11 +29,13 @@ import cgi
 import MySQLdb
 from collections import namedtuple
 
-# For the time being these are the capabilities for the immutable datasets
+# For the time being these are the capabilities for the datasets
 # coming from the user requests.
 capabilitiesFixed = {'isOrdered': False,
-                     'supportRoles': False,
-                     'membershipIsMutable': False,
+                     'restrictedToType': "miniSEED",
+                     'appendsToEnd': True,
+                     'supportsRoles': False,
+                     'membershipIsMutable': True,
                      'metadataIsMutable': False
                     }
 
@@ -115,10 +117,12 @@ class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum'])):
         :returns: This Member in JSON format
         :rtype: string
         """
-        # FIXME Capabilities should be centralized in the top part of the file
+        # FIXME See that the datatype is harcoded. This must be actually queried
+        # from the member but it has still not been added to the table columns
         interVar = ({'id': self.id,
                      'pid': self.pid,
                      'location': self.location,
+                     'datatype': 'miniSEED',
                      'checksum': self.checksum,
                      'mappings': {'index': self.id}
                     })

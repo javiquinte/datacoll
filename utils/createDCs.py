@@ -19,13 +19,16 @@ i.connect()
 
 def createColl(name):
     """Create a collection with the given name.
-    
+
     Return either the collection or an error message (both in json format).
     """
     print 'Creating collection with name = %s' % name
 
     jsonColl = {
         "pid": name,
+        "capabilities": {
+            "restrictedToType": "miniSEED"
+        },
         "properties": {
             "ownership": "geofon@gfz-potsdam.de"
         }
@@ -43,14 +46,15 @@ def createColl(name):
 
 def createMember(collID, do):
     """Create a member in a collection based on the given DataObject.
-    
+
     Return either the member or an error message (both in json format).
     """
     print 'Creating member with name = %s' % do.name
 
     jsonMember = {"location": "http://localhost:8000/api/registered" + \
                   do.path + "?download=true",
-                  "checksum": do.checksum
+                  "checksum": do.checksum,
+                  "datatype": "miniSEED"
                  }
 
     req = ul.Request('%s/collections/%d/members' %
