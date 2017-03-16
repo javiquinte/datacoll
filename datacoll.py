@@ -176,8 +176,9 @@ class MemberAPI(object):
         """
         cursor = self.conn.cursor()
 
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
+        query = 'select m.id, m.pid, m.location, m.checksum, d.name, m.dateadded '
+        query = query + 'from member as m inner join collection as c on m.cid = c.id '
+        query = query + 'left join datatype as d on m.datatype = d.id '
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -398,7 +399,8 @@ class MembersAPI(object):
         self.conn.commit()
 
         # Read the member
-        query = 'select id, pid, location, checksum from member where cid = %s and '
+        query = 'select m.id, m.pid, location, checksum, d.name, dateadded from member as m '
+        query = query + 'left join datatype as d on m.datatype = d.id where cid = %s and '
         sqlParams = [collID]
 
         if pid is not None:
@@ -762,17 +764,8 @@ class CollectionAPI(object):
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        if not download:
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            return Collection._make(coll).toJSON()
-
-        # If the user wants to download the resource pointed by the member
-        if member.pid is not None:
-            url = 'http://hdl.handle.net/%s' % member.pid
-        else:
-            url = member.location
-
-        raise cherrypy.HTTPRedirect(url, status=301)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return Collection._make(coll).toJSON()
 
 
 class DataColl(object):
