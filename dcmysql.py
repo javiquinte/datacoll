@@ -96,19 +96,21 @@ class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
         return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
-class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum'])):
-    """Namedtuple representing a :class:`~Member` of a :class:`~Collection`.
+class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum',
+                                   'datatype', 'dateadded'])):
+    """Namedtuple representing a :class:`~Member`.
 
     It includes methods to to return the JSON version of the member.
        id: int identifying the member
        pid: a global PID resolvable via handle.net
        location: a URL where the data can be download
        checksum: checksum of the data to check its validity
+       datatype: data type of the member
+       dateadded: date and time when the member was added to the collection
 
     :platform: Any
 
     """
-
     __slots__ = ()
 
     def toJSON(self):
@@ -122,11 +124,14 @@ class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum'])):
         interVar = ({'id': self.id,
                      'pid': self.pid,
                      'location': self.location,
-                     'datatype': 'miniSEED',
+                     'datatype': self.datatype,
                      'checksum': self.checksum,
-                     'mappings': {'index': self.id}
+                     'mappings': {
+                                   'index': self.id,
+                                   'dateAdded': self.dateadded
+                                 }
                     })
-        return json.dumps(interVar)
+        return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
 class CollJSONIter(object):
