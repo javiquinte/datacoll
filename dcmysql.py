@@ -61,7 +61,7 @@ class urlFile(object):
         raise StopIteration
 
 
-class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
+class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail', 'ts'])):
     """Namedtuple representing a :class:`~Collection`.
 
     It includes a method to return its JSON version.
@@ -75,6 +75,37 @@ class Collection(namedtuple('Collection', ['id', 'pid', 'mail', 'ts'])):
     """
 
     __slots__ = ()
+
+
+class Collection(CollectionBase):
+    """Abstraction from the DB storage for the Collection."""
+
+    __slots__ = ()
+
+    def __new__(cls, conn, collID=None, pid=None):
+        cursor = conn.cursor()
+        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
+        query = query + 'user as u on c.owner = u.id'
+
+        whereClause = list()
+        sqlParams = list()
+
+        if collID is not None:
+            whereClause.append('c.id = %s')
+            sqlParams.append(collID)
+
+        if pid is not None:
+            whereClause.append('c.pid = %s')
+            sqlParams.append(pid)
+
+        if len(sqlParams):
+            query = query + ' where ' + ' and '.join(whereClause)
+        cursor.execute(query, tuple(sqlParams))
+
+        coll = cursor.fetchone()
+        cursor.close()
+        self = super(Collection, cls).__new__(cls, *coll)
+        return self
 
     def toJSON(self):
         """Return the JSON version of this collection.

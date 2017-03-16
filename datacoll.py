@@ -545,17 +545,12 @@ class CollectionsAPI(object):
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id where c.pid = %s'
-        cursor.execute(query, (pid,))
-
-        coll = cursor.fetchone()
-
         cursor.close()
+        coll = Collection(self.conn, pid=pid)
 
         cherrypy.response.status = '201 Collection %s created' % str(pid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
+        return coll.toJSON()
 
 
 class CollectionAPI(object):
@@ -687,16 +682,12 @@ class CollectionAPI(object):
         cursor.execute(query, tuple(sqlParams))
         self.conn.commit()
 
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id where c.id = %s'
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-
         cursor.close()
 
+        coll = Collection(self.conn, collID=collID)
+
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
+        return coll.toJSON()
 
     @cherrypy.expose
     def DELETE(self, collID):
@@ -748,30 +739,8 @@ class CollectionAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        cursor = self.conn.cursor()
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id'
+        coll = Collection(self.conn, collID=collID)
 
-        whereClause = list()
-        sqlParams = list()
-
-        # Show only one collection if ID is present
-        whereClause.append('c.id = %s')
-        sqlParams.append(collID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read one collection because an ID is given. Check that there is
-        # something to return (result set not empty)
-        coll = cursor.fetchone()
-        cursor.close()
         if coll is None:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
@@ -779,7 +748,7 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
+        return coll.toJSON()
 
 
 class DataColl(object):
