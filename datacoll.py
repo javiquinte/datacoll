@@ -376,13 +376,27 @@ class MembersAPI(object):
 
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
-        query = 'insert into member (cid, pid, location, checksum, id) '
+        query = 'select id from datatype where name = %s'
+        cursor.execute(query, (datatype,))
+
+        datatypeID = cursor.fetchone()
+
+        if datatypeID is None:
+            query = 'insert into datatype (name) values (%s)'
+            cursor.execute(query, (datatype,))
+            # Retrieve the ID which was recently created
+            query = 'select id from datatype where name = %s'
+            cursor.execute(query, (datatype,))
+
+            datatypeID = cursor.fetchone()
+
+        query = 'insert into member (cid, pid, location, checksum, datatype, id) '
         if index is None:
-            query = query + 'select %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
-            sqlParams = [collID, pid, location, checksum, collID]
+            query = query + 'select %s, %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
+            sqlParams = [collID, pid, location, checksum, datatypeID, collID]
         else:
-            query = query + 'values (%s, %s, %s, %s, %s)'
-            sqlParams = [collID, pid, location, checksum, index]
+            query = query + 'values (%s, %s, %s, %s, %s, %s)'
+            sqlParams = [collID, pid, location, checksum, datatypeID, index]
 
         try:
             cursor.execute(query, tuple(sqlParams))
