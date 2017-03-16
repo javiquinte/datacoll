@@ -83,6 +83,10 @@ class Collection(CollectionBase):
     __slots__ = ()
 
     def __new__(cls, conn, collID=None, pid=None):
+        # If no filters are given then return an empty object
+        if ((collID is None) and (pid is None)):
+            return self
+
         cursor = conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -104,8 +108,18 @@ class Collection(CollectionBase):
 
         coll = cursor.fetchone()
         cursor.close()
+        if coll is None:
+            raise Exception('Collection not found')
+
         self = super(Collection, cls).__new__(cls, *coll)
         return self
+
+    def delete(self, conn):
+        cursor = conn.cursor()
+        query = 'delete from collection where id = %s'
+        cursor.execute(query, (self.id, ))
+        cursor.close()
+        conn.commit()
 
     def toJSON(self):
         """Return the JSON version of this collection.

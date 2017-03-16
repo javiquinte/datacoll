@@ -692,42 +692,20 @@ class CollectionAPI(object):
     @cherrypy.expose
     def DELETE(self, collID):
         """Delete a single collection."""
-        cursor = self.conn.cursor()
-        query = 'select count(id) from collection'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Show only one collection if ID is present
-        whereClause.append('id = %s')
-        sqlParams.append(collID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read how many collections I found. It should be 1 or 0.
-        numb = cursor.fetchone()
-        if numb[0] == 1:
-            query = 'delete from collection where id = %s'
-            cursor.execute(query, (collID, ))
-            cursor.close()
-            self.conn.commit()
-
-        elif numb[0] == 0:
-            cursor.close()
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        else:
-            cursor.close()
-            messDict = {'code': 0,
-                        'message': 'Wrong data! Two or more records found with a key (%s)' % collID}
-            message = json.dumps(messDict)
-            raise cherrypy.HTTPError(404, message)
+        coll.delete(self.conn)
+        # cursor = self.conn.cursor()
+        # query = 'delete from collection where id = %s'
+        # cursor.execute(query, (collID, ))
+        # cursor.close()
+        # self.conn.commit()
 
         return ""
 
@@ -739,9 +717,9 @@ class CollectionAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        coll = Collection(self.conn, collID=collID)
-
-        if coll is None:
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
