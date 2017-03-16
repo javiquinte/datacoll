@@ -114,6 +114,41 @@ class Collection(CollectionBase):
         self = super(Collection, cls).__new__(cls, *coll)
         return self
 
+    def update(self, conn, owner=None, pid=None):
+        cursor = conn.cursor()
+        # Insert only if the user does not exist yet
+        query = 'insert into user (mail) select * from (select %s) as tmp '
+        query = query + 'where not exists (select id from user where mail=%s) '
+        query = query + 'limit 1'
+        sqlParams = [owner, owner]
+
+        cursor.execute(query, tuple(sqlParams))
+        conn.commit()
+
+        # Read the ID from user
+        query = 'select id from user where mail = %s'
+        sqlParams = [owner]
+
+        cursor.execute(query, tuple(sqlParams))
+
+        # Read user ID
+        uid = cursor.fetchone()[0]
+
+        query = 'update collection set pid = %s, owner = %s, ts=DEFAULT where id = %s'
+        sqlParams = [pid, uid, collID]
+        cursor.execute(query, tuple(sqlParams))
+        conn.commit()
+
+        query = 'select id, pid, %s, ts from collection where id = %s'
+        cursor.execute(query, (owner, self.id))
+        coll = cursor.fetchone()
+        cursor.close()
+        if coll is None:
+            raise Exception('Collection not updated')
+
+        self = super(Collection, cls).__new__(cls, *coll)
+        return self
+
     def delete(self, conn):
         cursor = conn.cursor()
         query = 'delete from collection where id = %s'

@@ -639,52 +639,22 @@ class CollectionAPI(object):
         """
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
-        cursor = self.conn.cursor()
-
-        query = 'select count(*) from collection where id = %s'
-        cursor.execute(query, (collID,))
-
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-
-        if (numColls[0] != 1):
-            # Send Error 404
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
-                        'message': 'Collection %s not found!' % pid}
+                        'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
-            cursor.close()
             raise cherrypy.HTTPError(404, message)
+
+        # cursor = self.conn.cursor()
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
 
-        # Insert only if the user does not exist yet
-        query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) '
-        query = query + 'limit 1'
-        sqlParams = [owner, owner]
-
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        # Read the ID from user
-        query = 'select id from user where mail = %s'
-        sqlParams = [owner]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read user ID
-        uid = cursor.fetchone()[0]
-
-        query = 'update collection set pid = %s, owner = %s, ts=DEFAULT where id = %s'
-        sqlParams = [pid, uid, collID]
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        cursor.close()
-
-        coll = Collection(self.conn, collID=collID)
+        # FIXME I must check if the object coll is being updated as in the DB!
+        coll.update(owner=owner, pid=pid)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON()
@@ -701,11 +671,6 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         coll.delete(self.conn)
-        # cursor = self.conn.cursor()
-        # query = 'delete from collection where id = %s'
-        # cursor.execute(query, (collID, ))
-        # cursor.close()
-        # self.conn.commit()
 
         return ""
 
