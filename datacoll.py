@@ -32,6 +32,7 @@ import os
 import json
 import MySQLdb
 from dcmysql import Collection
+from dcmysql import Collections
 from dcmysql import Member
 from dcmysql import CollJSONIter
 from dcmysql import urlFile
@@ -466,30 +467,17 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        cursor = self.conn.cursor()
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Filter by owner if present in the parameters
-        if filter_by_owner is not None:
-            whereClause.append('u.mail = %s')
-            sqlParams.append(filter_by_owner)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, tuple(sqlParams))
+        # try:
+        coll = Collections(self.conn, owner=filter_by_owner)
+        # except:
+            # messDict = {'code': 0,
+            #             'message': 'Error retrieving collections!'}
+            # message = json.dumps(messDict)
+            # raise cherrypy.HTTPError(400, message)
 
         # If no ID is given iterate through all collections in cursor
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return CollJSONIter(cursor, Collection)
+        return CollJSONIter(coll, Collection)
 
     @cherrypy.expose
     def POST(self):

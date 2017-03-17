@@ -76,6 +76,64 @@ class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail', 'ts'])):
 
     __slots__ = ()
 
+    def toJSON(self):
+        """Return the JSON version of this collection.
+
+        :returns: This collection in JSON format
+        :rtype: string
+        """
+        # FIXME Capabilities should be later separated between (im)mutable
+        interVar = ({'id': self.id,
+                     'pid': self.pid,
+                     'creation': self.ts,
+                     'capabilities': capabilitiesFixed,
+                     'properties': {'ownership': self.mail,
+                                    'license': '',
+                                    'hasAccessRestrictions': False,
+                                    'memberOf': ()
+                                    }
+                    })
+        return json.dumps(interVar, default=datetime.datetime.isoformat)
+
+
+class Collections(object):
+    """Abstraction from the DB storage for a list of Collections."""
+
+    def __init__(self, conn, owner=None, limit=None):
+        print conn
+        self.cursor = conn.cursor()
+        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
+        query = query + 'user as u on c.owner = u.id'
+
+        whereClause = list()
+        sqlParams = list()
+
+        # Filter by owner if present in the parameters
+        if owner is not None:
+            whereClause.append('u.mail = %s')
+            sqlParams.append(owner)
+
+        if len(whereClause):
+            query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        self.cursor.execute(query, tuple(sqlParams))
+
+    def fetchone(self):
+        reg = self.cursor.fetchone()
+        # If there are no records
+        if reg is None:
+            return None
+
+        # Create a CollectionBase
+        return CollectionBase(*reg)
+
+    def __del__(self):
+        self.cursor.close()
+
 
 class Collection(CollectionBase):
     """Abstraction from the DB storage for the Collection."""
@@ -155,25 +213,6 @@ class Collection(CollectionBase):
         cursor.execute(query, (self.id, ))
         cursor.close()
         conn.commit()
-
-    def toJSON(self):
-        """Return the JSON version of this collection.
-
-        :returns: This collection in JSON format
-        :rtype: string
-        """
-        # FIXME Capabilities should be later separated between (im)mutable
-        interVar = ({'id': self.id,
-                     'pid': self.pid,
-                     'creation': self.ts,
-                     'capabilities': capabilitiesFixed,
-                     'properties': {'ownership': self.mail,
-                                    'license': '',
-                                    'hasAccessRestrictions': False,
-                                    'memberOf': ()
-                                    }
-                    })
-        return json.dumps(interVar, default=datetime.datetime.isoformat)
 
 
 class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum',
@@ -266,15 +305,13 @@ class CollJSONIter(object):
         logging.debug(str(reg))
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
-            self.cursor.close()
             self.status = 3
             return ']}'
 
-        JSONFactory = self.objType._make(reg)
         if self.status == 1:
             self.status = 2
             # Send first collection
-            return JSONFactory.toJSON()
+            return reg.toJSON()
         else:
             # Status=2 send a separator and a collection
-            return ', %s' % JSONFactory.toJSON()
+            return ', %s' % reg.toJSON()
