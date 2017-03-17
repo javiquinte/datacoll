@@ -41,6 +41,8 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+version = '0.1b1'
+
 # FIXME This is hardcoded but should be read from the configuration file
 limit = 100
 # For the time being these are the capabilities for the immutable datasets
@@ -106,7 +108,7 @@ class MemberAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-	return ""
+	    return ""
 
     @cherrypy.expose
     def download(self, collID, memberID):
@@ -162,7 +164,7 @@ class MemberAPI(object):
         return urlFile(url)
 
     download._cp_config = {'response.stream': True}
-        
+
     @cherrypy.expose
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
@@ -174,8 +176,9 @@ class MemberAPI(object):
         """
         cursor = self.conn.cursor()
 
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
+        query = 'select m.id, m.pid, m.location, m.checksum, d.name, m.dateadded '
+        query = query + 'from member as m inner join collection as c on m.cid = c.id '
+        query = query + 'left join datatype as d on m.datatype = d.id '
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -223,10 +226,11 @@ class MemberAPI(object):
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
         checksum = jsonMemb.get('checksum', None)
+        datatype = jsonMemb.get('datatype', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        # FIXME We need to check here if memberID and index are exactly the
-        # the same or if we need to update it
+        # FIXME We need to check here the datatype by querying the collection
+        # and comparing with the restrictedToType attribute
         cursor = self.conn.cursor()
         # Check that the member exists!
         query = 'select count(*) from member where cid = %s and id = %s'
@@ -343,6 +347,7 @@ class MembersAPI(object):
         # Read only the fields that we support
         pid = jsonMemb.get('pid', None)
         location = jsonMemb.get('location', None)
+        datatype = jsonMemb.get('datatype', None)
         checksum = jsonMemb.get('checksum', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
@@ -358,7 +363,6 @@ class MembersAPI(object):
         query = 'select count(*) from collection where id = %s'
         cursor.execute(query, (collID,))
 
-        # FIXME Check the type of numMemb!
         numMemb = cursor.fetchone()
 
         if (numMemb[0] != 1):
@@ -370,13 +374,29 @@ class MembersAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        query = 'insert into member (cid, pid, location, checksum, id) '
+        # FIXME Here we need to set also the datatype after checking the
+        # restrictedToType attribute in the collection
+        query = 'select id from datatype where name = %s'
+        cursor.execute(query, (datatype,))
+
+        datatypeID = cursor.fetchone()
+
+        if datatypeID is None:
+            query = 'insert into datatype (name) values (%s)'
+            cursor.execute(query, (datatype,))
+            # Retrieve the ID which was recently created
+            query = 'select id from datatype where name = %s'
+            cursor.execute(query, (datatype,))
+
+            datatypeID = cursor.fetchone()
+
+        query = 'insert into member (cid, pid, location, checksum, datatype, id) '
         if index is None:
-            query = query + 'select %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
-            sqlParams = [collID, pid, location, checksum, collID]
+            query = query + 'select %s, %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
+            sqlParams = [collID, pid, location, checksum, datatypeID, collID]
         else:
-            query = query + 'values (%s, %s, %s, %s, %s)'
-            sqlParams = [collID, pid, location, checksum, index]
+            query = query + 'values (%s, %s, %s, %s, %s, %s)'
+            sqlParams = [collID, pid, location, checksum, datatypeID, index]
 
         try:
             cursor.execute(query, tuple(sqlParams))
@@ -393,7 +413,8 @@ class MembersAPI(object):
         self.conn.commit()
 
         # Read the member
-        query = 'select id, pid, location, checksum from member where cid = %s and '
+        query = 'select m.id, m.pid, location, checksum, d.name, dateadded from member as m '
+        query = query + 'left join datatype as d on m.datatype = d.id where cid = %s and '
         sqlParams = [collID]
 
         if pid is not None:
@@ -445,8 +466,6 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        # print 'bodyGET', cherrypy.request.body
-
         cursor = self.conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -476,12 +495,11 @@ class CollectionsAPI(object):
     def POST(self):
         """Create a new collection.
 
-        :returns: An iterable object with a single collection or a collection
-            list in JSON format.
+        :returns: An iterable object with a single collection in JSON format.
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        
+
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -545,6 +563,51 @@ class CollectionAPI(object):
         self.conn = conn
 
     @cherrypy.expose
+    def download(self, collID):
+        """Download a complete collection.
+
+        :returns: A binary stream representing the complete collection
+        :rtype: string or :class:`~CollJSONIter`
+
+        """
+        cursor = self.conn.cursor()
+
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
+        query = query + 'join collection as c on m.cid = c.id '
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [collID]
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        cursor.execute(query, sqlParams)
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+        memberDB = cursor.fetchone()
+        while memberDB:
+            # Create an instance of the Member class
+            member = Member._make(memberDB)
+
+            # If the user wants to download the resource pointed by the member
+            if member.pid is not None:
+                url = 'http://hdl.handle.net/%s' % member.pid
+            else:
+                url = member.location
+
+            for buf in urlFile(url):
+                yield buf
+            memberDB = cursor.fetchone()
+
+    download._cp_config = {'response.stream': True}
+
+    @cherrypy.expose
     def capabilities(self, collID):
         """Return the capabilities of a collection.
 
@@ -579,7 +642,6 @@ class CollectionAPI(object):
         :rtype: :class:`~CollJSONIter`
 
         """
-        
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         cursor = self.conn.cursor()
@@ -679,7 +741,7 @@ class CollectionAPI(object):
         return ""
 
     @cherrypy.expose
-    def GET(self, collID, download=0):
+    def GET(self, collID):
         """Return a single collection.
 
         :returns: An iterable object with a single collection in JSON format.
@@ -716,17 +778,8 @@ class CollectionAPI(object):
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        if not download:
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            return Collection._make(coll).toJSON()
-
-        # If the user wants to download the resource pointed by the member
-        if member.pid is not None:
-            url = 'http://hdl.handle.net/%s' % member.pid
-        else:
-            url = member.location
-
-        raise cherrypy.HTTPRedirect(url, status=301)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return Collection._make(coll).toJSON()
 
 
 class DataColl(object):
@@ -752,7 +805,7 @@ class DataColl(object):
 
     def _cp_dispatch(self, vpath):
         if len(vpath):
-            if vpath[0] == "features":
+            if vpath[0] in ("features", "version"):
                 return self
 
             if vpath[0] == "collections":
@@ -767,7 +820,7 @@ class DataColl(object):
                 cherrypy.request.params['collID'] = vpath.pop(1)
                 if len(vpath) > 1:
                     # Remove a word and check that is "members"
-                    if vpath[1] not in ("members", "capabilities"):
+                    if vpath[1] not in ("members", "capabilities", "download"):
                         raise cherrypy.HTTPError(400, 'Bad Request')
 
                     if vpath[1] == "capabilities":
@@ -786,6 +839,10 @@ class DataColl(object):
                             return self.member
 
                         return self.members
+
+                    if vpath[1] == "download":
+                        vpath.pop(0)
+                        return self.coll
 
                 return self.coll
 
@@ -813,6 +870,17 @@ class DataColl(object):
                    }
         cherrypy.response.header_list = [('Content-Type', 'application/json')]
         return json.dumps(syscapab)
+
+    @cherrypy.expose
+    def version(self):
+        """Return the version of this implementation.
+
+        :returns: System capabilities in JSON format
+        :rtype: string
+
+        """
+        cherrypy.response.header_list = [('Content-Type', 'text/plain')]
+        return version
 
 
 if __name__ == "__main__":

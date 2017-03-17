@@ -61,125 +61,125 @@ class DataCollTests(unittest.TestCase):
     def test_memb_create_query_delete(self):
         "creation, query and deletion of a Member of a Collection"
 
-	with open('new-coll.json') as fin:
+    	with open('new-coll.json') as fin:
             data = fin.read()
-        req = urllib2.Request('%s/collections' % self.host, data=data)
-        req.add_header("Content-Type",'application/json')
-        # Create a collection
-        try:
-            u = urllib2.urlopen(req)
-            coll = json.loads(u.read())
-            # Check that I received a 201 code
-            self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
+            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req.add_header("Content-Type",'application/json')
+            # Create a collection
+            try:
+                u = urllib2.urlopen(req)
+                coll = json.loads(u.read())
+                # Check that I received a 201 code
+                self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
 
-	with open('new-memb.json') as fin:
+    	with open('new-memb.json') as fin:
             data = fin.read()
-        req = urllib2.Request('%s/collections/%d/members' %
-                              (self.host, coll['id']), data=data)
-        req.add_header("Content-Type",'application/json')
-        # Create a member
-        try:
+            req = urllib2.Request('%s/collections/%d/members' %
+                                  (self.host, coll['id']), data=data)
+            req.add_header("Content-Type",'application/json')
+            # Create a member
+            try:
+                u = urllib2.urlopen(req)
+                memb = json.loads(u.read())
+                # Check that I received a 201 code
+                self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
+
+            # Query the member to check it has been properly created
+            req = urllib2.Request('%s/collections/%d/members/%d' %
+                                  (self.host, coll['id'], memb['id']))
+            try:
+                u = urllib2.urlopen(req)
+                memb2 = json.loads(u.read())
+                # Check that error code is 200
+                self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
+                # Check that the ids are the same
+                self.assertEqual(memb['id'], memb2['id'], 'IDs differ!')
+                # Compare owner with the original one
+                self.assertEqual(json.loads(data)['location'], memb2['location'],
+                                 'Location recorded differ with the original one!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
+
+            # FIXME Check the syntax of "properties"
+            # Query the collection capabilities
+            # req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
+            # try:
+            #     u = urllib2.urlopen(req)
+            #     capab = json.loads(u.read())
+            #     # Check that the capabilities have at least the maxLength field
+            #     self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
+            # except Exception as e:
+            #     self.assertTrue(False, 'Error: %s' % e)
+
+            # Delete the member
+            req = urllib2.Request('%s/collections/%d/members/%d' %
+                                  (self.host, coll['id'], memb['id']))
+            req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
-            memb = json.loads(u.read())
-            # Check that I received a 201 code
-            self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
+            self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
 
-        # Query the member to check it has been properly created
-        req = urllib2.Request('%s/collections/%d/members/%d' %
-                              (self.host, coll['id'], memb['id']))
-        try:
+            # Delete the collection
+            req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
+            req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
-            memb2 = json.loads(u.read())
-            # Check that error code is 200
-            self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
-            # Check that the ids are the same
-            self.assertEqual(memb['id'], memb2['id'], 'IDs differ!')
-            # Compare owner with the original one
-            self.assertEqual(json.loads(data)['location'], memb2['location'],
-                             'Location recorded differ with the original one!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
-
-        # FIXME Check the syntax of "properties"
-        # Query the collection capabilities
-        # req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
-        # try:
-        #     u = urllib2.urlopen(req)
-        #     capab = json.loads(u.read())
-        #     # Check that the capabilities have at least the maxLength field
-        #     self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
-        # except Exception as e:
-        #     self.assertTrue(False, 'Error: %s' % e)
-
-        # Delete the member
-        req = urllib2.Request('%s/collections/%d/members/%d' %
-                              (self.host, coll['id'], memb['id']))
-        req.get_method = lambda: 'DELETE'
-        u = urllib2.urlopen(req)
-        self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
-
-        # Delete the collection
-        req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
-        req.get_method = lambda: 'DELETE'
-        u = urllib2.urlopen(req)
-        self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
-        return
+            self.assertEqual(u.getcode(), 200, 'HTTP Error code 200 was expected!')
+            return
 
     def test_coll_create_query_delete(self):
         "creation, query and deletion of a Collection"
 
-	with open('new-coll.json') as fin:
+    	with open('new-coll.json') as fin:
             data = fin.read()
-        req = urllib2.Request('%s/collections' % self.host, data=data)
-        req.add_header("Content-Type",'application/json')
-        # Create a collection
-        try:
-            u = urllib2.urlopen(req)
-            coll = json.loads(u.read())
-            # Check that I received a 201 code
-            self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
+            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req.add_header("Content-Type",'application/json')
+            # Create a collection
+            try:
+                u = urllib2.urlopen(req)
+                coll = json.loads(u.read())
+                # Check that I received a 201 code
+                self.assertEqual(u.getcode(), 201, 'HTTP code 201 was expected!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
 
-        # Query the collection to check it has been properly created
-        req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
-        try:
+            # Query the collection to check it has been properly created
+            req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
+            try:
+                u = urllib2.urlopen(req)
+                coll2 = json.loads(u.read())
+                # Check that I received a 200 code
+                self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
+                # Check that the ids are the same
+                self.assertEqual(coll['id'], coll2['id'], 'IDs differ!')
+                # Compare owner with the original one
+                self.assertEqual(json.loads(data)['properties']['ownership'],
+                                 coll2['properties']['ownership'],
+                                 'Owner recorded differ with the original one!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
+
+            # Query the collection capabilities
+            req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
+            try:
+                u = urllib2.urlopen(req)
+                capab = json.loads(u.read())
+                # Check that I received a 200 code
+                self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
+                # Check that the capabilities have at least the maxLength field
+                self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
+
+            # Delete the collection
+            req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
+            req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
-            coll2 = json.loads(u.read())
             # Check that I received a 200 code
             self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
-            # Check that the ids are the same
-            self.assertEqual(coll['id'], coll2['id'], 'IDs differ!')
-            # Compare owner with the original one
-            self.assertEqual(json.loads(data)['properties']['ownership'],
-                             coll2['properties']['ownership'],
-                             'Owner recorded differ with the original one!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
-
-        # Query the collection capabilities
-        req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
-        try:
-            u = urllib2.urlopen(req)
-            capab = json.loads(u.read())
-            # Check that I received a 200 code
-            self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
-            # Check that the capabilities have at least the maxLength field
-            self.assertEqual(capab['maxLength'], -1, 'maxLength is supposed to be -1 for this test!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
-
-        # Delete the collection
-        req = urllib2.Request('%s/collections/%d' % (self.host, coll['id']))
-        req.get_method = lambda: 'DELETE'
-        u = urllib2.urlopen(req)
-        # Check that I received a 200 code
-        self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
-        return
+            return
 
 global host
 

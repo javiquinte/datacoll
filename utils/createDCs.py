@@ -8,8 +8,8 @@ import urllib2 as ul
 
 years = ['1993']
 nets = ['GE']
-channels = ['BHZ.D']
-stations = ['DSB']
+stations = ['DSB', 'MORC', 'PMG']
+channels = ['BHN.D','BHE.D',  'BHZ.D', 'HHN.D', 'HHE.D', 'HHZ.D']
 
 dcUrl = 'http://localhost:8080/rda/datacoll'
 
@@ -19,13 +19,16 @@ i.connect()
 
 def createColl(name):
     """Create a collection with the given name.
-    
+
     Return either the collection or an error message (both in json format).
     """
     print 'Creating collection with name = %s' % name
 
     jsonColl = {
         "pid": name,
+        "capabilities": {
+            "restrictedToType": "miniSEED"
+        },
         "properties": {
             "ownership": "geofon@gfz-potsdam.de"
         }
@@ -43,14 +46,15 @@ def createColl(name):
 
 def createMember(collID, do):
     """Create a member in a collection based on the given DataObject.
-    
+
     Return either the member or an error message (both in json format).
     """
     print 'Creating member with name = %s' % do.name
 
     jsonMember = {"location": "http://localhost:8000/api/registered" + \
                   do.path + "?download=true",
-                  "checksum": do.checksum
+                  "checksum": do.checksum,
+                  "datatype": "miniSEED"
                  }
 
     req = ul.Request('%s/collections/%d/members' %
@@ -81,5 +85,14 @@ for yc in i.listDir(root).subcollections:
                     continue
                 jsonColl = createColl('%s.%s.*.%s.%s' % (nc.name, sc.name,
                                                          cc.name, yc.name))
+
+                if 'message' in jsonColl.keys():
+                    print str(jsonColl)
+
                 for f in cc.data_objects:
-                    createMember(jsonColl['id'], f)
+                    if f.name.startswith(nc.name + '.' + sc.name + '.'):
+                        try:
+                            int(f.name[-3])
+                            createMember(jsonColl['id'], f)
+                        except:
+                            continue
