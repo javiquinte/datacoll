@@ -215,8 +215,8 @@ class Collection(CollectionBase):
         conn.commit()
 
 
-class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum',
-                                   'datatype', 'dateadded'])):
+class MemberBase(namedtuple('Member', ['cid', 'id', 'pid', 'location',
+                                       'checksum', 'datatype', 'dateadded'])):
     """Namedtuple representing a :class:`~Member`.
 
     It includes methods to to return the JSON version of the member.
@@ -251,6 +251,57 @@ class Member(namedtuple('Member', ['id', 'pid', 'location', 'checksum',
                                  }
                     })
         return json.dumps(interVar, default=datetime.datetime.isoformat)
+
+
+class Member(MemberBase):
+    """Abstraction from the DB storage for the Member."""
+
+    __slots__ = ()
+
+    def __new__(cls, conn, collID=None, id=None):
+        # If no filters are given then return an empty object
+        if ((collID is None) and (pid is None)):
+            return self
+
+        cursor = conn.cursor()
+
+        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, m.dateadded '
+        query = query + 'from member as m inner join collection as c on m.cid = c.id '
+        query = query + 'left join datatype as d on m.datatype = d.id '
+
+        whereClause = list()
+        sqlParams = list()
+
+        if collID is not None:
+            whereClause.append('m.cid = %s')
+            sqlParams.append(collID)
+
+        if id is not None:
+            whereClause.append('m.id = %s')
+            sqlParams.append(id)
+
+        if len(sqlParams):
+            query = query + ' where ' + ' and '.join(whereClause)
+
+        cursor.execute(query, tuple(sqlParams))
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        member = cursor.fetchone()
+        cursor.close()
+
+        if member is None:
+            raise Exception('Member not found')
+
+        self = super(Member, cls).__new__(cls, *member)
+        return self
+
+    def delete(self, conn):
+        cursor = conn.cursor()
+        query = 'delete from member where cid = %s and id = %s'
+        cursor.execute(query, (self.cid, self.id, ))
+        cursor.close()
+        conn.commit()
 
 
 class CollJSONIter(object):
