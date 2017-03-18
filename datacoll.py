@@ -27,7 +27,6 @@
 
 
 import cherrypy
-import logging
 import os
 import json
 import MySQLdb
@@ -58,8 +57,12 @@ capabilitiesFixed = {
                       "maxLength": -1
                     }
 
+
 class MemberAPI(object):
+    """Object dispatching methods related to a single Member."""
+
     def __init__(self, conn):
+        """Constructor of the MemberAPI class."""
         self.conn = conn
 
     @cherrypy.expose
@@ -80,54 +83,6 @@ class MemberAPI(object):
 
         return ""
 
-
-
-        cursor = self.conn.cursor()
-        query = 'select count(id) from member'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Select usually the member related to this primary key
-        whereClause.append('cid = %s')
-        sqlParams.append(collID)
-
-        whereClause.append('id = %s')
-        sqlParams.append(memberID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read how many collections I found. It should be 1 or 0.
-        numb = cursor.fetchone()
-        if numb[0] == 1:
-            query = 'delete from member where id = %s and cid = %s'
-            cursor.execute(query, (memberID, collID, ))
-            cursor.close()
-            self.conn.commit()
-
-        elif numb[0] == 0:
-            cursor.close()
-            msg = 'Member ID %s within collection ID %s not found'
-            messDict = {'code': 0,
-                        'message': msg % (memberID, collID)}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(404, message)
-
-        else:
-            cursor.close()
-            msg = 'Wrong data! Two or more records found with a key (%s, %s)'
-            messDict = {'code': 0,
-                        'message': msg % (collID, memberID)}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(404, message)
-
-	    return ""
-
     @cherrypy.expose
     def download(self, collID, memberID):
         """Download a single collection member in JSON format.
@@ -137,40 +92,15 @@ class MemberAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-        cursor = self.conn.cursor()
-
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        whereClause.append('m.id = %s')
-        sqlParams.append(memberID)
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
-        # Read one member because an ID is given. Check that there is
-        # something to return (result set not empty)
-        memberDB = cursor.fetchone()
-        cursor.close()
-        if memberDB is None:
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberID, collID)}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
-
-        # Create an instance of the Member class
-        member = Member._make(memberDB)
 
         # If the user wants to download the resource pointed by the member
         if member.pid is not None:
@@ -222,66 +152,57 @@ class MemberAPI(object):
         datatype = jsonMemb.get('datatype', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        # FIXME We need to check here the datatype by querying the collection
-        # and comparing with the restrictedToType attribute
-        cursor = self.conn.cursor()
-        # Check that the member exists!
-        query = 'select count(*) from member where cid = %s and id = %s'
-        cursor.execute(query, (collID, memberID))
-
-        numMemb = cursor.fetchone()
-
-        if (numMemb[0] != 1):
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
+            # FIXME We need to check here the datatype by querying the
+            # collection and comparing with the restrictedToType attribute
             # Send Error 404
             msg = 'Member %s from Collection %s not found!'
             messDict = {'code': 0,
                         'message': msg % (memberID, collID)}
             message = json.dumps(messDict)
-            cursor.close()
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # Check that the index does not collide with existent IDs
         if index != memberID:
-            query = 'select count(*) from member where cid = %s and id = %s'
-            cursor.execute(query, (collID, index))
-
-            numMemb = cursor.fetchone()
-
-            if (numMemb[0] != 0):
+            try:
+                Member(self.conn, collID=collID, id=index)
                 # Send Error 400
                 msg = 'Index %s is already used for Collection %s !'
                 messDict = {'code': 0,
                             'message': msg % (index, collID)}
                 message = json.dumps(messDict)
-                cursor.close()
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 raise cherrypy.HTTPError(400, message)
+            except:
+                pass
 
-        query = 'update member set pid = %s , location = %s , checksum = %s , id = %s '
-        query = query + 'where cid = %s and id = %s'
-        sqlParams = [pid, location, checksum, index, collID, memberID]
-
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
+        member.update(self.conn, pid=pid, location=location, checksum=checksum,
+                      datatype=datatype, id=index)
 
         # Read the member
-        query = 'select id, pid, location, checksum from member '
-        query = query + 'where cid = %s and id = %s'
-        sqlParams = [collID, index]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        memb = cursor.fetchone()
-
-        cursor.close()
+        try:
+            memb = Member(self.conn, collID=collID, id=index)
+        except:
+            # Send Error 400
+            msg = 'Member seems not to be properly saved.'
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Member._make(memb).toJSON()
+        return memb.toJSON()
 
 
 class MembersAPI(object):
+    """Object dispatching methods related to a list of  Members."""
+
     def __init__(self, conn):
+        """Constructor of a list of Members."""
         self.conn = conn
 
     @cherrypy.expose
@@ -308,8 +229,8 @@ class MembersAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m '
+        query = query + 'inner join collection as c on m.cid = c.id '
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -353,7 +274,7 @@ class MembersAPI(object):
             raise cherrypy.HTTPError(400, message)
 
         try:
-            coll = Collection(self.conn, collID=collID)
+            Collection(self.conn, collID=collID)
         except:
             # Send Error 404
             messDict = {'code': 0,
@@ -380,12 +301,13 @@ class MembersAPI(object):
 
             datatypeID = cursor.fetchone()
 
-        query = 'insert into member (cid, pid, location, checksum, datatype, id) '
+        query = 'insert into member (cid, pid, location, checksum,datatype,id)'
         if index is None:
-            query = query + 'select %s, %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
+            query = query + ' select %s, %s, %s, %s, %s, coalesce(max(id),0)+1'
+            query = query + ' from member where cid = %s'
             sqlParams = [collID, pid, location, checksum, datatypeID, collID]
         else:
-            query = query + 'values (%s, %s, %s, %s, %s, %s)'
+            query = query + ' values (%s, %s, %s, %s, %s, %s)'
             sqlParams = [collID, pid, location, checksum, datatypeID, index]
 
         try:
@@ -403,21 +325,11 @@ class MembersAPI(object):
         self.conn.commit()
 
         # Read the member
-        member = Member(self.conn, collID=collID, id=memberID, pid=pid,
-                        location=location)
-
-        query = 'select m.id, m.pid, location, checksum, d.name, dateadded from member as m '
-        query = query + 'left join datatype as d on m.datatype = d.id where cid = %s and '
-        sqlParams = [collID]
-
-        if pid is not None:
-            query = query + 'pid = %s'
-            sqlParams.append(pid)
-        elif location is not None:
-            query = query + 'location = %s'
-            sqlParams.append(location)
-        else:
-            msg = 'Either pid or location should have a valid non empty value.'
+        try:
+            member = Member(self.conn, collID=collID, pid=pid,
+                            location=location)
+        except:
+            msg = 'Member not properly saved. Error when querying it.'
             messDict = {'code': 0,
                         'message': msg}
             message = json.dumps(messDict)
@@ -425,19 +337,19 @@ class MembersAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
 
-        cursor.execute(query, tuple(sqlParams))
-
-        memb = cursor.fetchone()
-
         cursor.close()
 
-        cherrypy.response.status = '201 Member created (%s)' % (pid if pid is not None else location)
+        cherrypy.response.status = '201 Member created (%s)' % \
+            (pid if pid is not None else location)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Member._make(memb).toJSON()
+        return member.toJSON()
 
 
 class CollectionsAPI(object):
+    """Object dispatching methods related to a list of Collections."""
+
     def __init__(self, conn):
+        """Constructor of the CollectionsAPI."""
         self.conn = conn
 
     # FIXME ! It is still not clear why here the handler looks for "index" and
@@ -446,6 +358,7 @@ class CollectionsAPI(object):
 
     @cherrypy.expose
     def default(self, **kwargs):
+        """Default method when there is no match."""
         # print kwargs
 
         toCall = getattr(self, cherrypy.request.method)
@@ -473,7 +386,6 @@ class CollectionsAPI(object):
         :rtype: string or :class:`~CollJSONIter`
 
         """
-
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -528,7 +440,10 @@ class CollectionsAPI(object):
 
 
 class CollectionAPI(object):
+    """Object dispatching methods related to a single Collection."""
+
     def __init__(self, conn):
+        """Constructor of the CollectionAPI."""
         self.conn = conn
 
     @cherrypy.expose
@@ -541,8 +456,8 @@ class CollectionAPI(object):
         """
         cursor = self.conn.cursor()
 
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
+        query = 'select m.id, m.pid, m.location, m.checksum from member as m '
+        query = query + 'inner join collection as c on m.cid = c.id '
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -669,7 +584,10 @@ class CollectionAPI(object):
 
 
 class DataColl(object):
+    """Main class with the dispatcher and the connection to the DB."""
+
     def __init__(self):
+        """Constructor of the DataColl object."""
         config = configparser.RawConfigParser()
         here = os.path.dirname(__file__)
         config.read(os.path.join(here, 'datacoll.cfg'))
@@ -679,7 +597,7 @@ class DataColl(object):
         self.user = config.get('mysql', 'user')
         self.password = config.get('mysql', 'password')
         self.db = config.get('mysql', 'db')
-        limit = config.getint('mysql', 'limit')
+        self.limit = config.getint('mysql', 'limit')
 
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)

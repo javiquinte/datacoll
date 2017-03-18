@@ -19,19 +19,16 @@
 .. moduleauthor:: Javier Quinteros <javier@gfz-potsdam.de>, GEOFON, GFZ Potsdam
 """
 
-import os
 import logging
 import json
 import datetime
-import configparser
 import urllib2 as ul
-import cgi
-import MySQLdb
 from collections import namedtuple
 
 # For the time being these are the capabilities for the datasets
 # coming from the user requests.
-capabilitiesFixed = {'isOrdered': False,
+capabilitiesFixed = {
+                     'isOrdered': False,
                      'restrictedToType': "miniSEED",
                      'appendsToEnd': True,
                      'supportsRoles': False,
@@ -41,10 +38,14 @@ capabilitiesFixed = {'isOrdered': False,
 
 
 class urlFile(object):
+    """Iterable object which retrieves the bitstream pointed by a URL."""
+
     def __init__(self, url):
+        """Create the iterable object."""
         self.url = url
 
     def __iter__(self):
+        """Method to iterate on the content."""
         blockSize = 1024 * 1024
 
         req = ul.Request(self.url)
@@ -61,7 +62,8 @@ class urlFile(object):
         raise StopIteration
 
 
-class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail', 'ts'])):
+class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail',
+                                                   'ts'])):
     """Namedtuple representing a :class:`~Collection`.
 
     It includes a method to return its JSON version.
@@ -83,7 +85,8 @@ class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail', 'ts'])):
         :rtype: string
         """
         # FIXME Capabilities should be later separated between (im)mutable
-        interVar = ({'id': self.id,
+        interVar = ({
+                     'id': self.id,
                      'pid': self.pid,
                      'creation': self.ts,
                      'capabilities': capabilitiesFixed,
@@ -100,7 +103,7 @@ class Collections(object):
     """Abstraction from the DB storage for a list of Collections."""
 
     def __init__(self, conn, owner=None, limit=None):
-        print conn
+        """Constructor of the list of collections."""
         self.cursor = conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -123,6 +126,7 @@ class Collections(object):
         self.cursor.execute(query, tuple(sqlParams))
 
     def fetchone(self):
+        """Retrieve the next Collection like a cursor."""
         reg = self.cursor.fetchone()
         # If there are no records
         if reg is None:
@@ -132,6 +136,51 @@ class Collections(object):
         return CollectionBase(*reg)
 
     def __del__(self):
+        """Destructor of the list of Collections."""
+        self.cursor.close()
+
+
+class Members(object):
+    """Abstraction from the DB storage for a list of Members."""
+
+    def __init__(self, conn,  collID=None, limit=None):
+        """Constructor of the list of Members."""
+        self.cursor = conn.cursor()
+
+        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
+        query = query + 'm.dateadded from member as m inner join collection '
+        query = query + 'as c on m.cid = c.id left join datatype as d '
+        query = query + 'on m.datatype = d.id '
+
+        whereClause = list()
+        sqlParams = list()
+
+        # Filter by owner if present in the parameters
+        if collID is not None:
+            whereClause.append('m.cid = %s')
+            sqlParams.append(collID)
+
+        if len(whereClause):
+            query = query + ' where ' + ' and '.join(whereClause)
+
+        if limit:
+            query = query + ' limit %s'
+            sqlParams.append(limit)
+
+        self.cursor.execute(query, tuple(sqlParams))
+
+    def fetchone(self):
+        """Retrieve the next Member like a cursor."""
+        reg = self.cursor.fetchone()
+        # If there are no records
+        if reg is None:
+            return None
+
+        # Create a MemberBase
+        return MemberBase(*reg)
+
+    def __del__(self):
+        """Destructor of the list of Members."""
         self.cursor.close()
 
 
@@ -141,8 +190,10 @@ class Collection(CollectionBase):
     __slots__ = ()
 
     def __new__(cls, conn, collID=None, pid=None):
+        """Constructor of a Collection object."""
         # If no filters are given then return an empty object
         if ((collID is None) and (pid is None)):
+            self = super(Collection, cls).__new__(cls, None, None, None, None)
             return self
 
         cursor = conn.cursor()
@@ -173,6 +224,7 @@ class Collection(CollectionBase):
         return self
 
     def update(self, conn, owner=None, pid=None):
+        """Update the fields passed as parameters in the MySQL DB."""
         cursor = conn.cursor()
         # Insert only if the user does not exist yet
         query = 'insert into user (mail) select * from (select %s) as tmp '
@@ -192,8 +244,9 @@ class Collection(CollectionBase):
         # Read user ID
         uid = cursor.fetchone()[0]
 
-        query = 'update collection set pid = %s, owner = %s, ts=DEFAULT where id = %s'
-        sqlParams = [pid, uid, collID]
+        query = 'update collection set pid=%s, owner=%s, ts=DEFAULT where ' + \
+            'id=%s'
+        sqlParams = [pid, uid, self.id]
         cursor.execute(query, tuple(sqlParams))
         conn.commit()
 
@@ -204,10 +257,11 @@ class Collection(CollectionBase):
         if coll is None:
             raise Exception('Collection not updated')
 
-        self = super(Collection, cls).__new__(cls, *coll)
+        self = super(Collection, self).__new__(self, *coll)
         return self
 
     def delete(self, conn):
+        """Delete a Collection from the MySQL DB."""
         cursor = conn.cursor()
         query = 'delete from collection where id = %s'
         cursor.execute(query, (self.id, ))
@@ -238,9 +292,10 @@ class MemberBase(namedtuple('Member', ['cid', 'id', 'pid', 'location',
         :returns: This Member in JSON format
         :rtype: string
         """
-        # FIXME See that the datatype is harcoded. This must be actually queried
+        # FIXME See that datatype is harcoded. This must be actually queried
         # from the member but it has still not been added to the table columns
-        interVar = ({'id': self.id,
+        interVar = ({
+                     'id': self.id,
                      'pid': self.pid,
                      'location': self.location,
                      'datatype': self.datatype,
@@ -258,16 +313,20 @@ class Member(MemberBase):
 
     __slots__ = ()
 
-    def __new__(cls, conn, collID=None, id=None):
+    def __new__(cls, conn, collID=None, id=None, pid=None, location=None):
+        """Constructor of the Member."""
         # If no filters are given then return an empty object
-        if ((collID is None) and (pid is None)):
+        if ((collID is None) and (id is None)):
+            self = super(Member, cls).__new__(cls, None, None, None, None,
+                                              None, None, None)
             return self
 
         cursor = conn.cursor()
 
-        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, m.dateadded '
-        query = query + 'from member as m inner join collection as c on m.cid = c.id '
-        query = query + 'left join datatype as d on m.datatype = d.id '
+        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
+        query = query + 'm.dateadded from member as m inner join collection '
+        query = query + 'as c on m.cid = c.id left join datatype as d '
+        query = query + 'on m.datatype = d.id '
 
         whereClause = list()
         sqlParams = list()
@@ -280,6 +339,14 @@ class Member(MemberBase):
             whereClause.append('m.id = %s')
             sqlParams.append(id)
 
+        if pid is not None:
+            whereClause.append('m.pid = %s')
+            sqlParams.append(pid)
+
+        if location is not None:
+            whereClause.append('m.location = %s')
+            sqlParams.append(location)
+
         if len(sqlParams):
             query = query + ' where ' + ' and '.join(whereClause)
 
@@ -291,22 +358,77 @@ class Member(MemberBase):
         cursor.close()
 
         if member is None:
-            raise Exception('Member not found')
+            raise Exception('Member not found!')
 
         self = super(Member, cls).__new__(cls, *member)
         return self
 
     def delete(self, conn):
+        """Delete a Member from the MySQL DB."""
         cursor = conn.cursor()
         query = 'delete from member where cid = %s and id = %s'
         cursor.execute(query, (self.cid, self.id, ))
         cursor.close()
         conn.commit()
 
+    def update(self, conn, id=None, pid=None, location=None, checksum=None,
+               datatype=None):
+        """Update the fields passed as parameters in the MySQL DB."""
+        setClause = list()
+        sqlParams = list()
+
+        if id is not None:
+            setClause.append('id = %s')
+            sqlParams.append(id)
+
+        if pid is not None:
+            setClause.append('pid = %s')
+            sqlParams.append(pid)
+
+        if location is not None:
+            setClause.append('location = %s')
+            sqlParams.append(location)
+
+        if checksum is not None:
+            setClause.append('checksum = %s')
+            sqlParams.append(checksum)
+
+        if datatype is not None:
+            setClause.append('datatype = %s')
+            sqlParams.append(datatype)
+
+        # If there is nothing to change
+        if not len(sqlParams):
+            return self
+
+        cursor = conn.cursor()
+        query = 'update member set ' + ', '.join(setClause)
+        query = query + ' where cid = %s and id = %s'
+        sqlParams.extend([self.cid, self.id])
+
+        cursor.execute(query, tuple(sqlParams))
+        conn.commit()
+
+        # Retrieve the updated record from the DB
+        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
+        query = query + 'm.dateadded from member as m inner join collection '
+        query = query + 'as c on m.cid = c.id left join datatype as d '
+        query = query + 'on m.datatype = d.id where m.cid = %s and m.id = %s'
+
+        cursor.execute(query, (self.cid, self.id if id is None else id))
+        memb = cursor.fetchone()
+        cursor.close()
+        if memb is None:
+            raise Exception('Member not updated')
+
+        self = super(Member, self).__new__(self, *memb)
+        return self
+
 
 class CollJSONIter(object):
-    """Iterable object capable of creating JSON chunks representing different
-    types of objects. For instance, :class:`~Member` or :class:`~Collection`.
+    """Iterable object which provides JSON version of different objects.
+
+     For instance, :class:`~Member` or :class:`~Collection`.
 
     :param cursor: MySQL cursor containing the result of a query
     :type cursor: MySQLdb.cursors.Cursor
@@ -318,6 +440,7 @@ class CollJSONIter(object):
     """
 
     def __init__(self, cursor, objType):
+        """Constructor of the JSONFactory."""
         self.cursor = cursor
         self.objType = objType
         # 0: Header must be sent; 1: Send 1st collection; 2: Send more items
@@ -326,6 +449,7 @@ class CollJSONIter(object):
         self.content_type = 'application/json'
 
     def __iter__(self):
+        """Iterative method."""
         return self
 
     def next(self):
@@ -341,7 +465,6 @@ class CollJSONIter(object):
         :raises: StopIteration
 
         """
-
         # Send headers
         if self.status == 0:
             self.status = 1
