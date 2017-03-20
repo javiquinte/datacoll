@@ -392,47 +392,28 @@ class CollectionsAPI(object):
         owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
 
-        # Insert only if the user does not exist yet
-        cursor = self.conn.cursor()
-        query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) '
-        query = query + 'limit 1'
-        sqlParams = [owner, owner]
+        try:
+            coll = Collection(self.conn, pid=pid)
 
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        # Read the ID from user
-        query = 'select id from user where mail = %s'
-        sqlParams = [owner]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read user ID
-        uid = cursor.fetchone()[0]
-
-        query = 'select count(*) from collection where pid = %s'
-        sqlParams = [pid]
-        cursor.execute(query, tuple(sqlParams))
-
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-
-        if ((type(numColls) != tuple) or numColls[0]):
             # Send Error 400
             messDict = {'code': 0,
                         'message': 'Collection PID already exists! (%s)' % pid}
             message = json.dumps(messDict)
-            cursor.close()
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
+        except:
+            pass
 
-        query = 'insert into collection (pid, owner) values (%s, %s)'
-        sqlParams = [pid, uid]
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        cursor.close()
-        coll = Collection(self.conn, pid=pid)
+        try:
+            coll = Collection()
+            coll.insert(owner=owner, pid=pid)
+        except:
+            # Send Error 400
+            messDict = {'code': 0,
+                        'message': 'Collection could not be inserted'}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.status = '201 Collection %s created' % str(pid)
         cherrypy.response.headers['Content-Type'] = 'application/json'

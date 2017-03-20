@@ -223,6 +223,44 @@ class Collection(CollectionBase):
         self = super(Collection, cls).__new__(cls, *coll)
         return self
 
+    def insert(self, conn, owner=None, pid=None):
+        """Insert a new collection in the MySQL DB."""
+        cursor = conn.cursor()
+        # Insert only if the user does not exist yet
+        query = 'insert into user (mail) select * from (select %s) as tmp '
+        query = query + 'where not exists (select id from user where mail=%s) '
+        query = query + 'limit 1'
+        sqlParams = [owner, owner]
+
+        cursor.execute(query, tuple(sqlParams))
+        conn.commit()
+
+        # Read the ID from user
+        query = 'select id from user where mail = %s'
+        sqlParams = [owner]
+
+        cursor.execute(query, tuple(sqlParams))
+
+        # Read user ID
+        uid = cursor.fetchone()[0]
+        query = 'insert into collection (pid, owner) values (%s, %s)'
+        sqlParams = [pid, uid]
+        cursor.execute(query, tuple(sqlParams))
+        conn.commit()
+
+        query = 'select id, pid, owner, ts from collection where pid = %s ' + \
+            'and owner = %s'
+        cursor.execute(query, (pid, owner))
+        coll = cursor.fetchone()
+        cursor.close()
+        if coll is None:
+            raise Exception('Collection not inserted')
+
+        self = super(Collection, self).__new__(self, *coll)
+        return self
+
+        cursor.close()
+
     def update(self, conn, owner=None, pid=None):
         """Update the fields passed as parameters in the MySQL DB."""
         cursor = conn.cursor()
