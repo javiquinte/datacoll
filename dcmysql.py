@@ -148,8 +148,7 @@ class Members(object):
         self.cursor = conn.cursor()
 
         query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
-        query = query + 'm.dateadded from member as m inner join collection '
-        query = query + 'as c on m.cid = c.id left join datatype as d '
+        query = query + 'm.dateadded from member as m left join datatype as d '
         query = query + 'on m.datatype = d.id '
 
         whereClause = list()

@@ -361,31 +361,14 @@ class CollectionAPI(object):
         :rtype: string or :class:`~JSONFactory`
 
         """
-        cursor = self.conn.cursor()
-
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m '
-        query = query + 'inner join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
+        members = Members(self.conn, collID=collID)
 
         # Read one member because an ID is given. Check that there is
         # something to return (result set not empty)
-        cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
-        memberDB = cursor.fetchone()
-        while memberDB:
-            # Create an instance of the Member class
-            member = Member._make(memberDB)
-
+        member = members.fetchone()
+        if member:
+            cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+        while member:
             # If the user wants to download the resource pointed by the member
             if member.pid is not None:
                 url = 'http://hdl.handle.net/%s' % member.pid
@@ -394,7 +377,7 @@ class CollectionAPI(object):
 
             for buf in urlFile(url):
                 yield buf
-            memberDB = cursor.fetchone()
+            member = members.fetchone()
 
     download._cp_config = {'response.stream': True}
 
