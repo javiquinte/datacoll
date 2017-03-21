@@ -33,7 +33,8 @@ import MySQLdb
 from dcmysql import Collection
 from dcmysql import Collections
 from dcmysql import Member
-from dcmysql import CollJSONIter
+from dcmysql import Members
+from dcmysql import JSONFactory
 from dcmysql import urlFile
 
 try:
@@ -89,7 +90,7 @@ class MemberAPI(object):
 
         :returns: An iterable object with a single collection member in JSON
                   format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         try:
@@ -119,7 +120,7 @@ class MemberAPI(object):
 
         :returns: An iterable object with a single collection member in JSON
                   format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         try:
@@ -140,7 +141,7 @@ class MemberAPI(object):
         """Update an existing member.
 
         :returns: An iterable object with the updated member.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
@@ -210,42 +211,14 @@ class MembersAPI(object):
         """Return a list of collection members in JSON format.
 
         :returns: An iterable object with a member list in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
-        cursor = self.conn.cursor()
-        query = 'select id from collection where id = %s'
+        membList = Members(self.conn, collID=collID)
 
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-        cursor.close()
-
-        if coll is None:
-            messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
-            message = json.dumps(messDict)
-
-            raise cherrypy.HTTPError(404, message)
-
-        cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m '
-        query = query + 'inner join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
+        # If no ID is given iterate through all collections in cursor
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return CollJSONIter(cursor, Member)
+        return JSONFactory(membList, Member)
 
     @cherrypy.expose
     def POST(self, collID):
@@ -253,7 +226,7 @@ class MembersAPI(object):
 
         :returns: An iterable object with a single member or a member list in
                   JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
@@ -320,21 +293,21 @@ class CollectionsAPI(object):
         """Return a list of collections.
 
         :returns: An iterable object with a collection list in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         coll = Collections(self.conn, owner=filter_by_owner)
 
         # If no ID is given iterate through all collections in cursor
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return CollJSONIter(coll, Collection)
+        return JSONFactory(coll, Collection)
 
     @cherrypy.expose
     def POST(self):
         """Create a new collection.
 
         :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         jsonColl = json.loads(cherrypy.request.body.fp.read())
@@ -385,7 +358,7 @@ class CollectionAPI(object):
         """Download a complete collection.
 
         :returns: A binary stream representing the complete collection
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         cursor = self.conn.cursor()
@@ -452,7 +425,7 @@ class CollectionAPI(object):
         """Update an existing collection.
 
         :returns: An iterable object with the updated collection.
-        :rtype: :class:`~CollJSONIter`
+        :rtype: :class:`~JSONFactory`
 
         """
         jsonColl = json.loads(cherrypy.request.body.fp.read())
@@ -497,7 +470,7 @@ class CollectionAPI(object):
         """Return a single collection.
 
         :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+        :rtype: string or :class:`~JSONFactory`
 
         """
         try:

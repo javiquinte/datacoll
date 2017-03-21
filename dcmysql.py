@@ -535,7 +535,7 @@ class Member(MemberBase):
         return self
 
 
-class CollJSONIter(object):
+class JSONFactory(object):
     """Iterable object which provides JSON version of different objects.
 
      For instance, :class:`~Member` or :class:`~Collection`.
