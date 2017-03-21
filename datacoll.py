@@ -27,13 +27,14 @@
 
 
 import cherrypy
-import logging
 import os
 import json
 import MySQLdb
 from dcmysql import Collection
+from dcmysql import Collections
 from dcmysql import Member
-from dcmysql import CollJSONIter
+from dcmysql import Members
+from dcmysql import JSONFactory
 from dcmysql import urlFile
 
 try:
@@ -57,102 +58,66 @@ capabilitiesFixed = {
                       "maxLength": -1
                     }
 
+
 class MemberAPI(object):
+    """Object dispatching methods related to a single Member."""
+
     def __init__(self, conn):
+        """Constructor of the MemberAPI class.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+        """
         self.conn = conn
 
     @cherrypy.expose
     def DELETE(self, collID, memberID):
-        """Delete a single member from a collection."""
-        cursor = self.conn.cursor()
-        query = 'select count(id) from member'
+        """Delete a single member from a collection.
 
-        whereClause = list()
-        sqlParams = list()
-
-        # Select usually the member related to this primary key
-        whereClause.append('cid = %s')
-        sqlParams.append(collID)
-
-        whereClause.append('id = %s')
-        sqlParams.append(memberID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read how many collections I found. It should be 1 or 0.
-        numb = cursor.fetchone()
-        if numb[0] == 1:
-            query = 'delete from member where id = %s and cid = %s'
-            cursor.execute(query, (memberID, collID, ))
-            cursor.close()
-            self.conn.commit()
-
-        elif numb[0] == 0:
-            cursor.close()
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Empty string
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
             msg = 'Member ID %s within collection ID %s not found'
             messDict = {'code': 0,
                         'message': msg % (memberID, collID)}
             message = json.dumps(messDict)
+
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        else:
-            cursor.close()
-            msg = 'Wrong data! Two or more records found with a key (%s, %s)'
-            messDict = {'code': 0,
-                        'message': msg % (collID, memberID)}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(404, message)
+        member.delete(self.conn)
 
-	    return ""
+        return ""
 
     @cherrypy.expose
     def download(self, collID, memberID):
         """Download a single collection member in JSON format.
 
-        :returns: An iterable object with a single collection member in JSON
-                  format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-        cursor = self.conn.cursor()
-
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        whereClause.append('m.id = %s')
-        sqlParams.append(memberID)
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
-        # Read one member because an ID is given. Check that there is
-        # something to return (result set not empty)
-        memberDB = cursor.fetchone()
-        cursor.close()
-        if memberDB is None:
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: An iterable object which downloads the member of a collection.
+:rtype: :class:`~urlFile`
+:raises: cherrypy.HTTPError
+"""
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberID, collID)}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
-
-        # Create an instance of the Member class
-        member = Member._make(memberDB)
 
         # If the user wants to download the resource pointed by the member
         if member.pid is not None:
@@ -169,37 +134,17 @@ class MemberAPI(object):
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
 
-        :returns: An iterable object with a single collection member in JSON
-                  format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-        cursor = self.conn.cursor()
-
-        query = 'select m.id, m.pid, m.location, m.checksum, d.name, m.dateadded '
-        query = query + 'from member as m inner join collection as c on m.cid = c.id '
-        query = query + 'left join datatype as d on m.datatype = d.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        whereClause.append('m.id = %s')
-        sqlParams.append(memberID)
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
-        # Read one member because an ID is given. Check that there is
-        # something to return (result set not empty)
-        memberDB = cursor.fetchone()
-        cursor.close()
-        if memberDB is None:
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Metadata related to a member of a collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberID, collID)}
@@ -207,8 +152,6 @@ class MemberAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        # Create an instance of the Member class
-        member = Member._make(memberDB)
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return member.toJSON()
 
@@ -216,10 +159,14 @@ class MemberAPI(object):
     def PUT(self, collID, memberID):
         """Update an existing member.
 
-        :returns: An iterable object with the updated member.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Metadata related to the updated member in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -229,119 +176,84 @@ class MemberAPI(object):
         datatype = jsonMemb.get('datatype', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        # FIXME We need to check here the datatype by querying the collection
-        # and comparing with the restrictedToType attribute
-        cursor = self.conn.cursor()
-        # Check that the member exists!
-        query = 'select count(*) from member where cid = %s and id = %s'
-        cursor.execute(query, (collID, memberID))
-
-        numMemb = cursor.fetchone()
-
-        if (numMemb[0] != 1):
+        try:
+            member = Member(self.conn, collID=collID, id=memberID)
+        except:
+            # FIXME We need to check here the datatype by querying the
+            # collection and comparing with the restrictedToType attribute
             # Send Error 404
             msg = 'Member %s from Collection %s not found!'
             messDict = {'code': 0,
                         'message': msg % (memberID, collID)}
             message = json.dumps(messDict)
-            cursor.close()
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # Check that the index does not collide with existent IDs
         if index != memberID:
-            query = 'select count(*) from member where cid = %s and id = %s'
-            cursor.execute(query, (collID, index))
-
-            numMemb = cursor.fetchone()
-
-            if (numMemb[0] != 0):
+            try:
+                Member(self.conn, collID=collID, id=index)
                 # Send Error 400
                 msg = 'Index %s is already used for Collection %s !'
                 messDict = {'code': 0,
                             'message': msg % (index, collID)}
                 message = json.dumps(messDict)
-                cursor.close()
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 raise cherrypy.HTTPError(400, message)
+            except:
+                pass
 
-        query = 'update member set pid = %s , location = %s , checksum = %s , id = %s '
-        query = query + 'where cid = %s and id = %s'
-        sqlParams = [pid, location, checksum, index, collID, memberID]
-
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
+        member.update(self.conn, pid=pid, location=location, checksum=checksum,
+                      datatype=datatype, id=index)
 
         # Read the member
-        query = 'select id, pid, location, checksum from member '
-        query = query + 'where cid = %s and id = %s'
-        sqlParams = [collID, index]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        memb = cursor.fetchone()
-
-        cursor.close()
+        try:
+            memb = Member(self.conn, collID=collID, id=index)
+        except:
+            # Send Error 400
+            msg = 'Member seems not to be properly saved.'
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Member._make(memb).toJSON()
+        return memb.toJSON()
 
 
 class MembersAPI(object):
+    """Object dispatching methods related to a list of  Members."""
+
     def __init__(self, conn):
+        """Constructor of a list of Members."""
         self.conn = conn
 
     @cherrypy.expose
     def GET(self, collID):
         """Return a list of collection members in JSON format.
 
-        :returns: An iterable object with a member list in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to all members of a collection in JSON format.
+:rtype: string
+"""
+        membList = Members(self.conn, collID=collID)
 
-        """
-        cursor = self.conn.cursor()
-        query = 'select id from collection where id = %s'
-
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-        cursor.close()
-
-        if coll is None:
-            messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
-            message = json.dumps(messDict)
-
-            raise cherrypy.HTTPError(404, message)
-
-        cursor = self.conn.cursor()
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
-
+        # If no ID is given iterate through all collections in cursor
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return CollJSONIter(cursor, Member)
+        return JSONFactory(membList, Member)
 
     @cherrypy.expose
     def POST(self, collID):
-        """Add a new member.
+        """Add a new member to an existing collection.
 
-        :returns: An iterable object with a single member or a member list in
-                  JSON format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the new member in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -351,100 +263,42 @@ class MembersAPI(object):
         checksum = jsonMemb.get('checksum', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        if ((pid is None) and (location is None)):
-            msg = 'Either pid or location should have a valid non empty value.'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
-        cursor = self.conn.cursor()
-        query = 'select count(*) from collection where id = %s'
-        cursor.execute(query, (collID,))
-
-        numMemb = cursor.fetchone()
-
-        if (numMemb[0] != 1):
+        try:
+            Collection(self.conn, collID=collID)
+        except:
             # Send Error 404
             messDict = {'code': 0,
                         'message': 'Collection %s not found!' % collID}
             message = json.dumps(messDict)
-            cursor.close()
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
-        query = 'select id from datatype where name = %s'
-        cursor.execute(query, (datatype,))
-
-        datatypeID = cursor.fetchone()
-
-        if datatypeID is None:
-            query = 'insert into datatype (name) values (%s)'
-            cursor.execute(query, (datatype,))
-            # Retrieve the ID which was recently created
-            query = 'select id from datatype where name = %s'
-            cursor.execute(query, (datatype,))
-
-            datatypeID = cursor.fetchone()
-
-        query = 'insert into member (cid, pid, location, checksum, datatype, id) '
-        if index is None:
-            query = query + 'select %s, %s, %s, %s, %s, coalesce(max(id), 0)+1 from member where cid = %s'
-            sqlParams = [collID, pid, location, checksum, datatypeID, collID]
-        else:
-            query = query + 'values (%s, %s, %s, %s, %s, %s)'
-            sqlParams = [collID, pid, location, checksum, datatypeID, index]
-
         try:
-            cursor.execute(query, tuple(sqlParams))
+            member = Member(None).insert(self.conn, collID=collID, pid=pid,
+                                         location=location)
         except:
-            self.conn.commit()
-            msg = 'Creation of member raised an error. Was it already present?'
+            msg = 'Member not properly saved. Error when querying it.'
             messDict = {'code': 0,
                         'message': msg}
             message = json.dumps(messDict)
-            cursor.close()
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
-        self.conn.commit()
-
-        # Read the member
-        query = 'select m.id, m.pid, location, checksum, d.name, dateadded from member as m '
-        query = query + 'left join datatype as d on m.datatype = d.id where cid = %s and '
-        sqlParams = [collID]
-
-        if pid is not None:
-            query = query + 'pid = %s'
-            sqlParams.append(pid)
-        elif location is not None:
-            query = query + 'location = %s'
-            sqlParams.append(location)
-        else:
-            msg = 'Either pid or location should have a valid non empty value.'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict)
-            cursor.close()
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
 
-        cursor.execute(query, tuple(sqlParams))
-
-        memb = cursor.fetchone()
-
-        cursor.close()
-
-        cherrypy.response.status = '201 Member created (%s)' % (pid if pid is not None else location)
+        cherrypy.response.status = '201 Member created (%s)' % \
+            (pid if pid is not None else location)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Member._make(memb).toJSON()
+        return member.toJSON()
 
 
 class CollectionsAPI(object):
+    """Object dispatching methods related to a list of Collections."""
+
     def __init__(self, conn):
+        """Constructor of the CollectionsAPI."""
         self.conn = conn
 
     # FIXME ! It is still not clear why here the handler looks for "index" and
@@ -453,6 +307,7 @@ class CollectionsAPI(object):
 
     @cherrypy.expose
     def default(self, **kwargs):
+        """Default method when there is no match."""
         # print kwargs
 
         toCall = getattr(self, cherrypy.request.method)
@@ -462,139 +317,85 @@ class CollectionsAPI(object):
     def GET(self, filter_by_owner=None):
         """Return a list of collections.
 
-        :returns: An iterable object with a collection list in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-        cursor = self.conn.cursor()
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Filter by owner if present in the parameters
-        if filter_by_owner is not None:
-            whereClause.append('u.mail = %s')
-            sqlParams.append(filter_by_owner)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, tuple(sqlParams))
+:param filter_by_owner: Mail from the owner of the collection.
+:type filter_by_owner: string
+:returns: Metadata related to all collections in JSON format.
+:rtype: string
+"""
+        coll = Collections(self.conn, owner=filter_by_owner)
 
         # If no ID is given iterate through all collections in cursor
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return CollJSONIter(cursor, Collection)
+        return JSONFactory(coll, Collection)
 
     @cherrypy.expose
     def POST(self):
         """Create a new collection.
 
-        :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-
+:returns: Metadata related to the new collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
 
-        # Insert only if the user does not exist yet
-        cursor = self.conn.cursor()
-        query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) '
-        query = query + 'limit 1'
-        sqlParams = [owner, owner]
+        try:
+            coll = Collection(self.conn, pid=pid)
 
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        # Read the ID from user
-        query = 'select id from user where mail = %s'
-        sqlParams = [owner]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read user ID
-        uid = cursor.fetchone()[0]
-
-        query = 'select count(*) from collection where pid = %s'
-        sqlParams = [pid]
-        cursor.execute(query, tuple(sqlParams))
-
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-
-        if ((type(numColls) != tuple) or numColls[0]):
             # Send Error 400
             messDict = {'code': 0,
                         'message': 'Collection PID already exists! (%s)' % pid}
             message = json.dumps(messDict)
-            cursor.close()
+            cherrypy.log(message, traceback=True)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
+        except:
+            pass
 
-        query = 'insert into collection (pid, owner) values (%s, %s)'
-        sqlParams = [pid, uid]
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id where c.pid = %s'
-        cursor.execute(query, (pid,))
-
-        coll = cursor.fetchone()
-
-        cursor.close()
+        try:
+            # It is important to call insert inline with an empty Collection!
+            coll = Collection(None).insert(self.conn, owner=owner, pid=pid)
+        except:
+            # Send Error 400
+            messDict = {'code': 0,
+                        'message': 'Collection could not be inserted'}
+            message = json.dumps(messDict)
+            cherrypy.log(message, traceback=True)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.status = '201 Collection %s created' % str(pid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
+        return coll.toJSON()
 
 
 class CollectionAPI(object):
+    """Object dispatching methods related to a single Collection."""
+
     def __init__(self, conn):
+        """Constructor of the CollectionAPI."""
         self.conn = conn
 
     @cherrypy.expose
     def download(self, collID):
         """Download a complete collection.
 
-        :returns: A binary stream representing the complete collection
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-        cursor = self.conn.cursor()
-
-        query = 'select m.id, m.pid, m.location, m.checksum from member as m inner '
-        query = query + 'join collection as c on m.cid = c.id '
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [collID]
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, sqlParams)
+:param collID: Collection ID.
+:type collID: int
+:returns: Contents of the collection concatenated.
+:rtype: bytestream
+"""
+        members = Members(self.conn, collID=collID)
 
         # Read one member because an ID is given. Check that there is
         # something to return (result set not empty)
-        cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
-        memberDB = cursor.fetchone()
-        while memberDB:
-            # Create an instance of the Member class
-            member = Member._make(memberDB)
-
+        member = members.fetchone()
+        if member:
+            cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+        while member:
             # If the user wants to download the resource pointed by the member
             if member.pid is not None:
                 url = 'http://hdl.handle.net/%s' % member.pid
@@ -603,7 +404,7 @@ class CollectionAPI(object):
 
             for buf in urlFile(url):
                 yield buf
-            memberDB = cursor.fetchone()
+            member = members.fetchone()
 
     download._cp_config = {'response.stream': True}
 
@@ -611,132 +412,77 @@ class CollectionAPI(object):
     def capabilities(self, collID):
         """Return the capabilities of a collection.
 
-        :returns: The capabilities of a collection in JSON format.
-        :rtype: string
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: The capabilities of the collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
-        cursor = self.conn.cursor()
-        query = 'select id from collection where id = %s'
-
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-        cursor.close()
-        if coll is None:
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
-
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        cherrypy.response.header_list = [('Content-Type', 'application/json')]
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(capabilitiesFixed)
 
     @cherrypy.expose
     def PUT(self, collID):
         """Update an existing collection.
 
-        :returns: An iterable object with the updated collection.
-        :rtype: :class:`~CollJSONIter`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the updated collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
-        cursor = self.conn.cursor()
-
-        query = 'select count(*) from collection where id = %s'
-        cursor.execute(query, (collID,))
-
-        # FIXME Check the type of numColls!
-        numColls = cursor.fetchone()
-
-        if (numColls[0] != 1):
-            # Send Error 404
-            messDict = {'code': 0,
-                        'message': 'Collection %s not found!' % pid}
-            message = json.dumps(messDict)
-            cursor.close()
-            raise cherrypy.HTTPError(404, message)
-
-        # Read only the fields that we support
-        owner = jsonColl['properties']['ownership'].strip()
-        pid = jsonColl['pid'].strip()
-
-        # Insert only if the user does not exist yet
-        query = 'insert into user (mail) select * from (select %s) as tmp '
-        query = query + 'where not exists (select id from user where mail=%s) '
-        query = query + 'limit 1'
-        sqlParams = [owner, owner]
-
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        # Read the ID from user
-        query = 'select id from user where mail = %s'
-        sqlParams = [owner]
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read user ID
-        uid = cursor.fetchone()[0]
-
-        query = 'update collection set pid = %s, owner = %s, ts=DEFAULT where id = %s'
-        sqlParams = [pid, uid, collID]
-        cursor.execute(query, tuple(sqlParams))
-        self.conn.commit()
-
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id where c.id = %s'
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-
-        cursor.close()
-
-        cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
-
-    @cherrypy.expose
-    def DELETE(self, collID):
-        """Delete a single collection."""
-        cursor = self.conn.cursor()
-        query = 'select count(id) from collection'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Show only one collection if ID is present
-        whereClause.append('id = %s')
-        sqlParams.append(collID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read how many collections I found. It should be 1 or 0.
-        numb = cursor.fetchone()
-        if numb[0] == 1:
-            query = 'delete from collection where id = %s'
-            cursor.execute(query, (collID, ))
-            cursor.close()
-            self.conn.commit()
-
-        elif numb[0] == 0:
-            cursor.close()
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
-        else:
-            cursor.close()
+        # cursor = self.conn.cursor()
+
+        # Read only the fields that we support
+        owner = jsonColl['properties']['ownership'].strip()
+        pid = jsonColl['pid'].strip()
+
+        # FIXME I must check if the object coll is being updated as in the DB!
+        coll.update(owner=owner, pid=pid)
+
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        return coll.toJSON()
+
+    @cherrypy.expose
+    def DELETE(self, collID):
+        """Delete a single collection.
+
+:param collID: Collection ID.
+:type collID: int
+:returns: Empty string.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
-                        'message': 'Wrong data! Two or more records found with a key (%s)' % collID}
+                        'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
+
+        coll.delete(self.conn)
 
         return ""
 
@@ -744,46 +490,29 @@ class CollectionAPI(object):
     def GET(self, collID):
         """Return a single collection.
 
-        :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~CollJSONIter`
-
-        """
-        cursor = self.conn.cursor()
-        query = 'select c.id, c.pid, mail, ts from collection as c inner join '
-        query = query + 'user as u on c.owner = u.id'
-
-        whereClause = list()
-        sqlParams = list()
-
-        # Show only one collection if ID is present
-        whereClause.append('c.id = %s')
-        sqlParams.append(collID)
-
-        if len(whereClause):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        if limit:
-            query = query + ' limit %s'
-            sqlParams.append(limit)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read one collection because an ID is given. Check that there is
-        # something to return (result set not empty)
-        coll = cursor.fetchone()
-        cursor.close()
-        if coll is None:
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return Collection._make(coll).toJSON()
+        return coll.toJSON()
 
 
 class DataColl(object):
+    """Main class with the dispatcher and the connection to the DB."""
+
     def __init__(self):
+        """Constructor of the DataColl object."""
         config = configparser.RawConfigParser()
         here = os.path.dirname(__file__)
         config.read(os.path.join(here, 'datacoll.cfg'))
@@ -793,7 +522,7 @@ class DataColl(object):
         self.user = config.get('mysql', 'user')
         self.password = config.get('mysql', 'password')
         self.db = config.get('mysql', 'db')
-        limit = config.getint('mysql', 'limit')
+        self.limit = config.getint('mysql', 'limit')
 
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)
@@ -852,10 +581,9 @@ class DataColl(object):
     def features(self):
         """Read the features of the system and return them in JSON format.
 
-        :returns: System capabilities in JSON format
-        :rtype: string
-
-        """
+:returns: System capabilities in JSON format
+:rtype: string
+"""
         syscapab = {
                      "providesCollectionPids": False,
                      "collectionPidProviderType": "string",
@@ -875,10 +603,9 @@ class DataColl(object):
     def version(self):
         """Return the version of this implementation.
 
-        :returns: System capabilities in JSON format
-        :rtype: string
-
-        """
+:returns: System capabilities in JSON format
+:rtype: string
+"""
         cherrypy.response.header_list = [('Content-Type', 'text/plain')]
         return version
 

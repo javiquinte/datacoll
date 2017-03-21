@@ -104,6 +104,20 @@ class DataCollTests(unittest.TestCase):
             except Exception as e:
                 self.assertTrue(False, 'Error: %s' % e)
 
+            # Query all the members belonging to the collection
+            req = urllib2.Request('%s/collections/%d/members/' %
+                                  (self.host, coll['id']))
+            try:
+                u = urllib2.urlopen(req)
+                memb2 = json.loads(u.read())
+                # Check that error code is 200
+                self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
+
+                # FIXME What else should I check?
+                # Probably that there is only one member!
+            except Exception as e:
+                self.assertTrue(False, 'Error: %s' % e)
+
             # FIXME Check the syntax of "properties"
             # Query the collection capabilities
             # req = urllib2.Request('%s/collections/%d/capabilities' % (self.host, coll['id']))
