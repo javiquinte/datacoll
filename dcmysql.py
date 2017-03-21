@@ -19,7 +19,6 @@
 .. moduleauthor:: Javier Quinteros <javier@gfz-potsdam.de>, GEOFON, GFZ Potsdam
 """
 
-import logging
 import json
 import datetime
 import urllib2 as ul
@@ -41,7 +40,11 @@ class urlFile(object):
     """Iterable object which retrieves the bitstream pointed by a URL."""
 
     def __init__(self, url):
-        """Create the iterable object."""
+        """Create the iterable object.
+
+:param url: URL to download the data from.
+:type url: string
+"""
         self.url = url
 
     def __iter__(self):
@@ -57,7 +60,7 @@ class urlFile(object):
                 yield buf
                 buf = u.read(blockSize)
         except Exception as e:
-            logging.error('Exception %s' % str(e))
+            cherrypy.log('Exception %s' % str(e))
 
         raise StopIteration
 
@@ -66,24 +69,22 @@ class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'mail',
                                                    'ts'])):
     """Namedtuple representing a :class:`~Collection`.
 
-    It includes a method to return its JSON version.
-       id: collection ID (int)
-       pid: uuid or pid identifying the collection
-       mail: mail address of the owner
-       ts: creation of the collection
+It includes a method to return its JSON version.
+   id: collection ID (int)
+   pid: uuid or pid identifying the collection
+   mail: mail address of the owner
+   ts: creation of the collection
 
-    :platform: Any
-
-    """
-
+:platform: Any
+"""
     __slots__ = ()
 
     def toJSON(self):
         """Return the JSON version of this collection.
 
-        :returns: This collection in JSON format
-        :rtype: string
-        """
+:returns: This collection in JSON format.
+:rtype: string
+"""
         # FIXME Capabilities should be later separated between (im)mutable
         interVar = ({
                      'id': self.id,
@@ -103,7 +104,15 @@ class Collections(object):
     """Abstraction from the DB storage for a list of Collections."""
 
     def __init__(self, conn, owner=None, limit=None):
-        """Constructor of the list of collections."""
+        """Constructor of the list of collections.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param owner: Mail of the owner of the collection.
+:type owner: string
+:param limit: Limit the number of records from the result.
+:type limit: int
+"""
         self.cursor = conn.cursor()
         query = 'select c.id, c.pid, mail, ts from collection as c inner join '
         query = query + 'user as u on c.owner = u.id'
@@ -144,7 +153,15 @@ class Members(object):
     """Abstraction from the DB storage for a list of Members."""
 
     def __init__(self, conn,  collID=None, limit=None):
-        """Constructor of the list of Members."""
+        """Constructor of the list of Members.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param collID: Collection ID.
+:type collID: int
+:param limit: Limit the number of records from the result.
+:type limit: int
+"""
         self.cursor = conn.cursor()
 
         query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
@@ -169,7 +186,11 @@ class Members(object):
         self.cursor.execute(query, tuple(sqlParams))
 
     def fetchone(self):
-        """Retrieve the next Member like a cursor."""
+        """Retrieve the next Member like a cursor.
+
+:returns: The next member of the collection.
+:rtype: :class:`~MemberBase`
+"""
         reg = self.cursor.fetchone()
         # If there are no records
         if reg is None:
@@ -189,7 +210,17 @@ class Collection(CollectionBase):
     __slots__ = ()
 
     def __new__(cls, conn, collID=None, pid=None):
-        """Constructor of a Collection object."""
+        """Constructor of a Collection object.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param collID: Collection ID.
+:type collID: int
+:param pid: PID of the collection.
+:type pid: string
+:returns: A collection from the DB based on the given parameters.
+:rtype: :class:`~CollectionBase`
+"""
         # If no filters are given then return an empty object
         if ((collID is None) and (pid is None)):
             self = super(Collection, cls).__new__(cls, None, None, None, None)
@@ -223,7 +254,18 @@ class Collection(CollectionBase):
         return self
 
     def insert(self, conn, owner=None, pid=None):
-        """Insert a new collection in the MySQL DB."""
+        """Insert a new collection in the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param owner: Mail of the owner of the collection.
+:type owner: string
+:param pid: PID of the added collection.
+:type pid: string
+:returns: A new collection.
+:rtype: :class:`~CollectionBase`
+:raise: Exception
+"""
         cursor = conn.cursor()
         # Insert only if the user does not exist yet
         query = 'insert into user (mail) select * from (select %s) as tmp '
@@ -259,7 +301,18 @@ class Collection(CollectionBase):
         return self
 
     def update(self, conn, owner=None, pid=None):
-        """Update the fields passed as parameters in the MySQL DB."""
+        """Update the fields passed as parameters in the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param owner: Mail of the owner of the collection.
+:type owner: string
+:param pid: PID of the added collection.
+:type pid: string
+:returns: The updated collection.
+:rtype: :class:`~CollectionBase`
+:raise: Exception
+"""
         cursor = conn.cursor()
         # Insert only if the user does not exist yet
         query = 'insert into user (mail) select * from (select %s) as tmp '
@@ -296,7 +349,11 @@ class Collection(CollectionBase):
         return self
 
     def delete(self, conn):
-        """Delete a Collection from the MySQL DB."""
+        """Delete a Collection from the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+"""
         cursor = conn.cursor()
         query = 'delete from collection where id = %s'
         cursor.execute(query, (self.id, ))
@@ -324,9 +381,9 @@ class MemberBase(namedtuple('Member', ['cid', 'id', 'pid', 'location',
     def toJSON(self):
         """Return the JSON version of this collection member.
 
-        :returns: This Member in JSON format
-        :rtype: string
-        """
+:returns: This Member in JSON format
+:rtype: string
+"""
         # FIXME See that datatype is harcoded. This must be actually queried
         # from the member but it has still not been added to the table columns
         interVar = ({
@@ -349,7 +406,22 @@ class Member(MemberBase):
     __slots__ = ()
 
     def __new__(cls, conn, collID=None, id=None, pid=None, location=None):
-        """Constructor of the Member."""
+        """Constructor of the Member.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param collID: Collection ID.
+:type collID: int
+:param id: Member ID.
+:type id: int
+:param pid: PID of the collection.
+:type pid: string
+:param location: URL where collection can be found.
+:type location: string
+:returns: A member from the DB based on the given parameters.
+:rtype: :class:`~MemberBase`
+:raises: Exception
+"""
         # If no filters are given then return an empty object
         if ((collID is None) and (id is None)):
             self = super(Member, cls).__new__(cls, None, None, None, None,
@@ -359,8 +431,7 @@ class Member(MemberBase):
         cursor = conn.cursor()
 
         query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
-        query = query + 'm.dateadded from member as m inner join collection '
-        query = query + 'as c on m.cid = c.id left join datatype as d '
+        query = query + 'm.dateadded from member as m left join datatype as d '
         query = query + 'on m.datatype = d.id '
 
         whereClause = list()
@@ -399,7 +470,11 @@ class Member(MemberBase):
         return self
 
     def delete(self, conn):
-        """Delete a Member from the MySQL DB."""
+        """Delete a Member from the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+"""
         cursor = conn.cursor()
         query = 'delete from member where cid = %s and id = %s'
         cursor.execute(query, (self.cid, self.id, ))
@@ -408,7 +483,26 @@ class Member(MemberBase):
 
     def insert(self, conn, collID, pid=None, location=None, checksum=None,
                datatype=None, index=None):
-        """Insert a new Member in the MySQL DB."""
+        """Insert a new Member in the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param collID: Collection ID.
+:type collID: int
+:param pid: PID of the collection.
+:type pid: string
+:param location: URL where collection can be found.
+:type location: string
+:param checksum: Checksum of the data file.
+:type checksum: string
+:param datatype: Data type of the resource specified by the :class:`~Member`.
+:type datatype: string
+:param index: Member position (index) within the collection.
+:type index: int
+:returns: A member from the DB based on the given parameters.
+:rtype: :class:`~MemberBase`
+:raises: Exception
+"""
         cursor = conn.cursor()
 
         # Either pid or location should have a valid value
@@ -482,7 +576,24 @@ class Member(MemberBase):
 
     def update(self, conn, id=None, pid=None, location=None, checksum=None,
                datatype=None):
-        """Update the fields passed as parameters in the MySQL DB."""
+        """Update the fields passed as parameters in the MySQL DB.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+:param id: ID of the collection.
+:type id: int
+:param pid: PID of the collection.
+:type pid: string
+:param location: URL where collection can be found.
+:type location: string
+:param checksum: Checksum of the data file.
+:type checksum: string
+:param datatype: Data type of the resource specified by the :class:`~Member`.
+:type datatype: string
+:returns: A member from the DB based on the given parameters.
+:rtype: :class:`~MemberBase`
+:raises: Exception
+"""
         setClause = list()
         sqlParams = list()
 
@@ -539,14 +650,11 @@ class JSONFactory(object):
 
      For instance, :class:`~Member` or :class:`~Collection`.
 
-    :param cursor: MySQL cursor containing the result of a query
-    :type cursor: MySQLdb.cursors.Cursor
-    :param objType: Class which must be used to create the objects returned
-    :type objType: type
-
-    :platform: Any
-
-    """
+:param cursor: MySQL cursor containing the result of a query
+:type cursor: MySQLdb.cursors.Cursor
+:param objType: Class which must be used to create the objects returned
+:type objType: type
+"""
 
     def __init__(self, cursor, objType):
         """Constructor of the JSONFactory."""
@@ -564,16 +672,15 @@ class JSONFactory(object):
     def next(self):
         """Return the next object.
 
-        Tuples are read from the cursor and returned in JSON format. A veriable
-        "status" is defined to track in which state are we. Meanings are:
-        0 = Header must be sent ('{"contents": [').
-        1 = Send 1st element.
-        2 = Send the rest of the elements.
-        3 = Headers have been closed and StopIteration should be raised.
+Tuples are read from the cursor and returned in JSON format. A veriable
+"status" is defined to track in which state are we. Meanings are:
+0 = Header must be sent ('{"contents": [').
+1 = Send 1st element.
+2 = Send the rest of the elements.
+3 = Headers have been closed and StopIteration should be raised.
 
-        :raises: StopIteration
-
-        """
+:raises: StopIteration
+"""
         # Send headers
         if self.status == 0:
             self.status = 1
@@ -585,7 +692,6 @@ class JSONFactory(object):
 
         # Load a record
         reg = self.cursor.fetchone()
-        logging.debug(str(reg))
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
             self.status = 3

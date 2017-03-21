@@ -63,12 +63,25 @@ class MemberAPI(object):
     """Object dispatching methods related to a single Member."""
 
     def __init__(self, conn):
-        """Constructor of the MemberAPI class."""
+        """Constructor of the MemberAPI class.
+
+:param conn: Connection to the MySQL DB.
+:type conn: MySQLdb.connections.Connection
+        """
         self.conn = conn
 
     @cherrypy.expose
     def DELETE(self, collID, memberID):
-        """Delete a single member from a collection."""
+        """Delete a single member from a collection.
+
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Empty string
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -88,11 +101,14 @@ class MemberAPI(object):
     def download(self, collID, memberID):
         """Download a single collection member in JSON format.
 
-        :returns: An iterable object with a single collection member in JSON
-                  format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: An iterable object which downloads the member of a collection.
+:rtype: :class:`~urlFile`
+:raises: cherrypy.HTTPError
+"""
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -118,11 +134,14 @@ class MemberAPI(object):
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
 
-        :returns: An iterable object with a single collection member in JSON
-                  format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Metadata related to a member of a collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -140,10 +159,14 @@ class MemberAPI(object):
     def PUT(self, collID, memberID):
         """Update an existing member.
 
-        :returns: An iterable object with the updated member.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:param memberID: Member ID.
+:type memberID: int
+:returns: Metadata related to the updated member in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -210,10 +233,11 @@ class MembersAPI(object):
     def GET(self, collID):
         """Return a list of collection members in JSON format.
 
-        :returns: An iterable object with a member list in JSON format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to all members of a collection in JSON format.
+:rtype: string
+"""
         membList = Members(self.conn, collID=collID)
 
         # If no ID is given iterate through all collections in cursor
@@ -222,13 +246,14 @@ class MembersAPI(object):
 
     @cherrypy.expose
     def POST(self, collID):
-        """Add a new member.
+        """Add a new member to an existing collection.
 
-        :returns: An iterable object with a single member or a member list in
-                  JSON format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the new member in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -292,10 +317,11 @@ class CollectionsAPI(object):
     def GET(self, filter_by_owner=None):
         """Return a list of collections.
 
-        :returns: An iterable object with a collection list in JSON format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param filter_by_owner: Mail from the owner of the collection.
+:type filter_by_owner: string
+:returns: Metadata related to all collections in JSON format.
+:rtype: string
+"""
         coll = Collections(self.conn, owner=filter_by_owner)
 
         # If no ID is given iterate through all collections in cursor
@@ -306,10 +332,10 @@ class CollectionsAPI(object):
     def POST(self):
         """Create a new collection.
 
-        :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:returns: Metadata related to the new collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -357,10 +383,11 @@ class CollectionAPI(object):
     def download(self, collID):
         """Download a complete collection.
 
-        :returns: A binary stream representing the complete collection
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Contents of the collection concatenated.
+:rtype: bytestream
+"""
         members = Members(self.conn, collID=collID)
 
         # Read one member because an ID is given. Check that there is
@@ -385,10 +412,12 @@ class CollectionAPI(object):
     def capabilities(self, collID):
         """Return the capabilities of a collection.
 
-        :returns: The capabilities of a collection in JSON format.
-        :rtype: string
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: The capabilities of the collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
         try:
@@ -407,10 +436,12 @@ class CollectionAPI(object):
     def PUT(self, collID):
         """Update an existing collection.
 
-        :returns: An iterable object with the updated collection.
-        :rtype: :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the updated collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         try:
@@ -435,7 +466,14 @@ class CollectionAPI(object):
 
     @cherrypy.expose
     def DELETE(self, collID):
-        """Delete a single collection."""
+        """Delete a single collection.
+
+:param collID: Collection ID.
+:type collID: int
+:returns: Empty string.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         try:
             coll = Collection(self.conn, collID=collID)
         except:
@@ -452,10 +490,12 @@ class CollectionAPI(object):
     def GET(self, collID):
         """Return a single collection.
 
-        :returns: An iterable object with a single collection in JSON format.
-        :rtype: string or :class:`~JSONFactory`
-
-        """
+:param collID: Collection ID.
+:type collID: int
+:returns: Metadata related to the collection in JSON format.
+:rtype: string
+:raises: cherrypy.HTTPError
+"""
         try:
             coll = Collection(self.conn, collID=collID)
         except:
@@ -541,10 +581,9 @@ class DataColl(object):
     def features(self):
         """Read the features of the system and return them in JSON format.
 
-        :returns: System capabilities in JSON format
-        :rtype: string
-
-        """
+:returns: System capabilities in JSON format
+:rtype: string
+"""
         syscapab = {
                      "providesCollectionPids": False,
                      "collectionPidProviderType": "string",
@@ -564,10 +603,9 @@ class DataColl(object):
     def version(self):
         """Return the version of this implementation.
 
-        :returns: System capabilities in JSON format
-        :rtype: string
-
-        """
+:returns: System capabilities in JSON format
+:rtype: string
+"""
         cherrypy.response.header_list = [('Content-Type', 'text/plain')]
         return version
 
