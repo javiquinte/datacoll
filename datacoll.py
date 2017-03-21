@@ -341,6 +341,7 @@ class CollectionsAPI(object):
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
+        restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
 
         try:
             coll = Collection(self.conn, pid=pid)
@@ -357,7 +358,8 @@ class CollectionsAPI(object):
 
         try:
             # It is important to call insert inline with an empty Collection!
-            coll = Collection(None).insert(self.conn, owner=owner, pid=pid)
+            coll = Collection(None).insert(self.conn, owner=owner, pid=pid,
+                                           restrictedtotype=restrictedtotype)
         except:
             # Send Error 400
             messDict = {'code': 0,
@@ -429,8 +431,11 @@ class CollectionAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
+        auxCap = capabilitiesFixed.copy()
+        auxCap['restrictedtotype'] = coll.restrictedtotype
+
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(capabilitiesFixed)
+        return json.dumps(auxCap)
 
     @cherrypy.expose
     def PUT(self, collID):
@@ -457,9 +462,10 @@ class CollectionAPI(object):
         # Read only the fields that we support
         owner = jsonColl['properties']['ownership'].strip()
         pid = jsonColl['pid'].strip()
+        restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
 
         # FIXME I must check if the object coll is being updated as in the DB!
-        coll.update(owner=owner, pid=pid)
+        coll.update(owner=owner, pid=pid, restrictedtotype=restrictedtotype)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON()

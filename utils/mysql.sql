@@ -21,10 +21,14 @@ CREATE TABLE collection (
         id INT AUTO_INCREMENT NOT NULL,
         pid VARCHAR(42) DEFAULT NULL,
         owner INT NOT NULL,
+        restrictedtotype INT NULL,
         ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(id),
         FOREIGN KEY(owner)
           REFERENCES user(id)
+          ON DELETE CASCADE,
+        FOREIGN KEY(restrictedtotype)
+          REFERENCES datatype(id)
           ON DELETE CASCADE,
         UNIQUE KEY collectionpid (pid)
 ) ENGINE=INNODB;
