@@ -435,21 +435,16 @@ class CollectionAPI(object):
         """
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
-        cursor = self.conn.cursor()
-        query = 'select id from collection where id = %s'
-
-        cursor.execute(query, (collID,))
-
-        coll = cursor.fetchone()
-        cursor.close()
-        if coll is None:
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
-
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        cherrypy.response.header_list = [('Content-Type', 'application/json')]
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(capabilitiesFixed)
 
     @cherrypy.expose
