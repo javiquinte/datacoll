@@ -6,17 +6,19 @@ DROP TABLE IF EXISTS datatype;
 CREATE TABLE datatype (
         id INT AUTO_INCREMENT,
         name VARCHAR(50) NOT NULL,
-        PRIMARY KEY(id)
+        PRIMARY KEY(id),
+        UNIQUE KEY datatypename (name)
 ) ENGINE=INNODB;
 
 CREATE TABLE user (
         id INT AUTO_INCREMENT,
         mail VARCHAR(50) NOT NULL,
-        PRIMARY KEY(id)
+        PRIMARY KEY(id),
+        UNIQUE KEY usermail (mail)
 ) ENGINE=INNODB;
 
 CREATE TABLE collection (
-        id INT AUTO_INCREMENT,
+        id INT AUTO_INCREMENT NOT NULL,
         pid VARCHAR(42) DEFAULT NULL,
         owner INT NOT NULL,
         ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,19 +26,19 @@ CREATE TABLE collection (
         FOREIGN KEY(owner)
           REFERENCES user(id)
           ON DELETE CASCADE,
-        INDEX collpidind (pid)
+        UNIQUE KEY collectionpid (pid)
 ) ENGINE=INNODB;
 
 CREATE TABLE member (
         id INT NOT NULL,
         cid INT NOT NULL,
-        pid VARCHAR(42),
-        location VARCHAR(200),
-        checksum VARCHAR(50),
+        pid VARCHAR(42) DEFAULT NULL,
+        location VARCHAR(200) DEFAULT NULL,
+        checksum VARCHAR(50) DEFAULT NULL,
         datatype INT NULL,
         dateadded TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(cid, id),
-        INDEX mempidind (pid),
+        UNIQUE KEY memberpid (pid, cid),
         FOREIGN KEY(datatype)
           REFERENCES datatype(id)
           ON DELETE CASCADE,
