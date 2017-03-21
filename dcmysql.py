@@ -407,6 +407,80 @@ class Member(MemberBase):
         cursor.close()
         conn.commit()
 
+    def insert(self, conn, collID, pid=None, location=None, checksum=None,
+               datatype=None, index=None):
+        """Insert a new Member in the MySQL DB."""
+        cursor = conn.cursor()
+
+        # Either pid or location should have a valid value
+        if ((pid is None) and (location is None)):
+            msg = 'Either PID or location should have a valid non empty value.'
+            raise Exception(msg)
+
+        if datatype is None:
+            datatypeID = None
+        else:
+            query = 'select id from datatype where name = %s'
+            cursor.execute(query, (datatype,))
+            datatypeID = cursor.fetchone()
+
+            if datatypeID is None:
+                query = 'insert into datatype (name) values (%s)'
+                cursor.execute(query, (datatype,))
+                conn.commit()
+                # Retrieve the ID which was recently created
+                query = 'select id from datatype where name = %s'
+                cursor.execute(query, (datatype,))
+
+                datatypeID = cursor.fetchone()
+
+        query = 'insert into member (cid, pid, location, checksum,datatype,id)'
+        if index is None:
+            query = query + ' select %s, %s, %s, %s, %s, coalesce(max(id),0)+1'
+            query = query + ' from member where cid = %s'
+            sqlParams = [collID, pid, location, checksum, datatypeID, collID]
+        else:
+            query = query + ' values (%s, %s, %s, %s, %s, %s)'
+            sqlParams = [collID, pid, location, checksum, datatypeID, index]
+
+        try:
+            cursor.execute(query, tuple(sqlParams))
+            conn.commit()
+        except:
+            conn.commit()
+            cursor.close()
+            msg = 'Creation of member raised an error! Was it already present?'
+            raise Exception(msg)
+
+        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
+        query = query + 'm.dateadded from member as m left join datatype as d '
+        query = query + 'on m.datatype = d.id'
+
+        whereClause = ['m.cid=%s']
+        sqlParams = [collID]
+
+        if pid is not None:
+            whereClause.append('m.pid = %s')
+            sqlParams.append(pid)
+
+        if location is not None:
+            whereClause.append('m.location = %s')
+            sqlParams.append(location)
+
+        if len(sqlParams):
+            query = query + ' where ' + ' and '.join(whereClause)
+
+        cursor.execute(query, tuple(sqlParams))
+
+        # Read one member because an ID is given. Check that there is
+        # something to return (result set not empty)
+        member = cursor.fetchone()
+
+        cursor.close()
+        self = super(Member, self).__new__(type(self), *member)
+        return self
+
+
     def update(self, conn, id=None, pid=None, location=None, checksum=None,
                datatype=None):
         """Update the fields passed as parameters in the MySQL DB."""
@@ -457,7 +531,7 @@ class Member(MemberBase):
         if memb is None:
             raise Exception('Member not updated')
 
-        self = super(Member, self).__new__(self, *memb)
+        self = super(Member, self).__new__(type(self), *memb)
         return self
 
 

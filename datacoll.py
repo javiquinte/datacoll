@@ -265,14 +265,6 @@ class MembersAPI(object):
         checksum = jsonMemb.get('checksum', None)
         index = jsonMemb.get('mappings', {}).get('index', None)
 
-        if ((pid is None) and (location is None)):
-            msg = 'Either PID or location should have a valid non empty value.'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
         try:
             Collection(self.conn, collID=collID)
         except:
@@ -280,64 +272,23 @@ class MembersAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection %s not found!' % collID}
             message = json.dumps(messDict)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
-        cursor = self.conn.cursor()
-
-        query = 'select id from datatype where name = %s'
-        cursor.execute(query, (datatype,))
-
-        datatypeID = cursor.fetchone()
-
-        if datatypeID is None:
-            query = 'insert into datatype (name) values (%s)'
-            cursor.execute(query, (datatype,))
-            # Retrieve the ID which was recently created
-            query = 'select id from datatype where name = %s'
-            cursor.execute(query, (datatype,))
-
-            datatypeID = cursor.fetchone()
-
-        query = 'insert into member (cid, pid, location, checksum,datatype,id)'
-        if index is None:
-            query = query + ' select %s, %s, %s, %s, %s, coalesce(max(id),0)+1'
-            query = query + ' from member where cid = %s'
-            sqlParams = [collID, pid, location, checksum, datatypeID, collID]
-        else:
-            query = query + ' values (%s, %s, %s, %s, %s, %s)'
-            sqlParams = [collID, pid, location, checksum, datatypeID, index]
-
         try:
-            cursor.execute(query, tuple(sqlParams))
-        except:
-            self.conn.commit()
-            msg = 'Creation of member raised an error. Was it already present?'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict)
-            cursor.close()
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
-        self.conn.commit()
-
-        # Read the member
-        try:
-            member = Member(self.conn, collID=collID, pid=pid,
-                            location=location)
+            member = Member(None).insert(self.conn, collID=collID, pid=pid,
+                                         location=location)
         except:
             msg = 'Member not properly saved. Error when querying it.'
             messDict = {'code': 0,
                         'message': msg}
             message = json.dumps(messDict)
-            cursor.close()
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
-
-        cursor.close()
 
         cherrypy.response.status = '201 Member created (%s)' % \
             (pid if pid is not None else location)
