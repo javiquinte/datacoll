@@ -399,19 +399,21 @@ class CollectionsAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection PID already exists! (%s)' % pid}
             message = json.dumps(messDict)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
         except:
             pass
 
         try:
-            coll = Collection()
-            coll.insert(owner=owner, pid=pid)
+            # It is important to call insert inline with an empty Collection!
+            coll = Collection(None).insert(self.conn, owner=owner, pid=pid)
         except:
             # Send Error 400
             messDict = {'code': 0,
                         'message': 'Collection could not be inserted'}
             message = json.dumps(messDict)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 

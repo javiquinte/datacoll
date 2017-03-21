@@ -250,16 +250,14 @@ class Collection(CollectionBase):
 
         query = 'select id, pid, owner, ts from collection where pid = %s ' + \
             'and owner = %s'
-        cursor.execute(query, (pid, owner))
+        cursor.execute(query, (pid, uid))
         coll = cursor.fetchone()
         cursor.close()
         if coll is None:
             raise Exception('Collection not inserted')
 
-        self = super(Collection, self).__new__(self, *coll)
+        self = super(Collection, self).__new__(type(self), *coll)
         return self
-
-        cursor.close()
 
     def update(self, conn, owner=None, pid=None):
         """Update the fields passed as parameters in the MySQL DB."""
@@ -295,7 +293,7 @@ class Collection(CollectionBase):
         if coll is None:
             raise Exception('Collection not updated')
 
-        self = super(Collection, self).__new__(self, *coll)
+        self = super(Collection, self).__new__(type(self), *coll)
         return self
 
     def delete(self, conn):
