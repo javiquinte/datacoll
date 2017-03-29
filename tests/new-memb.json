@@ -1,7 +1,7 @@
 {
   "location": "http://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf",
   "checksum": "md5:fab97ace1f7d33486a4717216d52d3c9",
-  "datatype": "pdf",
+  "datatype": "miniSEED",
   "mappings": {
     "index": 0
   }

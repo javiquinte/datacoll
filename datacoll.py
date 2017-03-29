@@ -203,6 +203,27 @@ class MemberAPI(object):
             except:
                 pass
 
+        # Read the collection to check whether datatype is restricted
+        try:
+            coll = Collection(self.conn, collID=collID)
+        except:
+            msg = 'Error checking the collection properties!'
+            messDict = {'code': 0,
+                        'message': msg}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
+
+        # Check if the collection accepts only a particular datatype
+        if ((coll.restrictedtotype is not None) and
+                (datatype != coll.restrictedtotype)):
+            msg = 'Datatype error! Collection only accepts %s'
+            messDict = {'code': 0,
+                        'message': msg % coll.restrictedtotype}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
+
         member.update(self.conn, pid=pid, location=location, checksum=checksum,
                       datatype=datatype, id=index)
 
@@ -264,7 +285,7 @@ class MembersAPI(object):
         index = jsonMemb.get('mappings', {}).get('index', None)
 
         try:
-            Collection(self.conn, collID=collID)
+            coll = Collection(self.conn, collID=collID)
         except:
             # Send Error 404
             messDict = {'code': 0,
@@ -273,6 +294,16 @@ class MembersAPI(object):
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
+
+        # Check if the collection accepts only a particular datatype
+        if ((coll.restrictedtotype is not None) and
+                (datatype != coll.restrictedtotype)):
+            msg = 'Datatype error! Collection only accepts %s'
+            messDict = {'code': 0,
+                        'message': msg % coll.restrictedtotype}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
