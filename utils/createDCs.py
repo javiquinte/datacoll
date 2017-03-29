@@ -26,6 +26,7 @@ def createColl(name):
 
     jsonColl = {
         "pid": name,
+        "name": name,
         "capabilities": {
             "restrictedToType": "miniSEED"
         },
@@ -83,8 +84,8 @@ for yc in i.listDir(root).subcollections:
             for cc in sc.subcollections:
                 if cc.name not in channels:
                     continue
-                jsonColl = createColl('%s.%s.*.%s.%s' % (nc.name, sc.name,
-                                                         cc.name, yc.name))
+                jsonColl = createColl('%s.%s.%s.%s' % (nc.name, sc.name,
+                                                       cc.name[:3], yc.name))
 
                 if 'message' in jsonColl.keys():
                     print str(jsonColl)

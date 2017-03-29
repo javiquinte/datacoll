@@ -339,8 +339,6 @@ class CollectionsAPI(object):
     @cherrypy.expose
     def default(self, **kwargs):
         """Default method when there is no match."""
-        # print kwargs
-
         toCall = getattr(self, cherrypy.request.method)
         return toCall()
 
@@ -370,16 +368,30 @@ class CollectionsAPI(object):
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
-        owner = jsonColl['properties']['ownership'].strip()
-        pid = jsonColl['pid'].strip()
-        restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+        try:
+            owner = jsonColl['properties']['ownership'].strip()
+        except:
+            owner = None
+        try:
+            pid = jsonColl['pid'].strip()
+        except:
+            pid = None
+        try:
+            name = jsonColl['name'].strip()
+        except:
+            name = None
+        try:
+            restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+        except:
+            restrictedtotype = None
 
         try:
-            coll = Collection(self.conn, pid=pid)
+            coll = Collection(self.conn, pid=pid, name=name)
 
             # Send Error 400
+            msg = 'Collection with this PID and name already exists! (%s, %s)'
             messDict = {'code': 0,
-                        'message': 'Collection PID already exists! (%s)' % pid}
+                        'message': msg % (pid, name)}
             message = json.dumps(messDict)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -389,7 +401,7 @@ class CollectionsAPI(object):
 
         try:
             # It is important to call insert inline with an empty Collection!
-            coll = Collection(None).insert(self.conn, owner=owner, pid=pid,
+            coll = Collection(None).insert(self.conn, owner=owner, pid=pid, name=name,
                                            restrictedtotype=restrictedtotype)
         except:
             # Send Error 400
@@ -491,12 +503,25 @@ class CollectionAPI(object):
         # cursor = self.conn.cursor()
 
         # Read only the fields that we support
-        owner = jsonColl['properties']['ownership'].strip()
-        pid = jsonColl['pid'].strip()
-        restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+        try:
+            owner = jsonColl['properties']['ownership'].strip()
+        except:
+            owner = None
+        try:
+            pid = jsonColl['pid'].strip()
+        except:
+            pid = None
+        try:
+            name = jsonColl['name'].strip()
+        except:
+            name = None
+        try:
+            restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+        except:
+            restrictedtotype = None
 
         # FIXME I must check if the object coll is being updated as in the DB!
-        coll.update(owner=owner, pid=pid, restrictedtotype=restrictedtotype)
+        coll.update(name=name, owner=owner, pid=pid, restrictedtotype=restrictedtotype)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON()
