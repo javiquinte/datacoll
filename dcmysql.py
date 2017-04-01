@@ -186,7 +186,8 @@ class Members(object):
         sqlParams = list()
 
         if rule is not None:
-            whereClause.append('rule LIKE %s')
+            query = query + 'inner join collection as c on m.cid = c.id '
+            whereClause.append('c.name LIKE %s')
             sqlParams.append(rule)
 
         if ((rule is None) and (collID is not None)):
