@@ -59,7 +59,7 @@ class urlFile(object):
                 yield buf
                 buf = u.read(blockSize)
         except Exception as e:
-            cherrypy.log('Exception %s' % str(e))
+            print('Exception %s' % str(e))
 
         raise StopIteration
 

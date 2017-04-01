@@ -1,0 +1,11 @@
+{
+    "pid": "some.pid2",
+    "name": "My rule based coll",
+    "rule": "%.name",
+    "capabilities": {
+        "restrictedToType": "miniSEED"
+    },
+    "properties": {
+        "ownership": "none@gfz-potsdam"
+    }
+}
