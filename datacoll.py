@@ -42,7 +42,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-version = '0.1b1'
+version = '0.2a1.dev1'
 
 # FIXME This is hardcoded but should be read from the configuration file
 limit = 100
@@ -55,7 +55,8 @@ capabilitiesFixed = {
                       "membershipIsMutable": True,
                       "metadataIsMutable": True,
                       "restrictedToType": "string",
-                      "maxLength": -1
+                      "maxLength": -1,
+                      "ruleBasedGeneration": True
                     }
 
 
@@ -384,6 +385,10 @@ class CollectionsAPI(object):
             restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
         except:
             restrictedtotype = None
+        try:
+            rule = jsonColl['rule'].strip()
+        except:
+            rule = None
 
         try:
             coll = Collection(self.conn, pid=pid, name=name)
@@ -402,7 +407,7 @@ class CollectionsAPI(object):
         try:
             # It is important to call insert inline with an empty Collection!
             coll = Collection(None).insert(self.conn, owner=owner, pid=pid, name=name,
-                                           restrictedtotype=restrictedtotype)
+                                           restrictedtotype=restrictedtotype, rule=rule)
         except:
             # Send Error 400
             messDict = {'code': 0,
@@ -519,9 +524,13 @@ class CollectionAPI(object):
             restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
         except:
             restrictedtotype = None
+        try:
+            rule = jsonColl['rule'].strip()
+        except:
+            rule = None
 
         # FIXME I must check if the object coll is being updated as in the DB!
-        coll.update(name=name, owner=owner, pid=pid, restrictedtotype=restrictedtotype)
+        coll.update(name=name, owner=owner, pid=pid, restrictedtotype=restrictedtotype, rule=rule)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON()

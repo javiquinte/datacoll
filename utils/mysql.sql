@@ -24,6 +24,7 @@ CREATE TABLE collection (
         owner INT NOT NULL,
         restrictedtotype INT NULL,
         ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        rule VARCHAR(20) DEFAULT NULL,
         PRIMARY KEY(id),
         FOREIGN KEY(owner)
           REFERENCES user(id)

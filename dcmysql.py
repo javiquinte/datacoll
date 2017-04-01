@@ -65,7 +65,8 @@ class urlFile(object):
 
 
 class CollectionBase(namedtuple('CollectionBase', ['id', 'pid', 'name', 'mail',
-                                                   'ts', 'restrictedtotype'])):
+                                                   'ts', 'restrictedtotype',
+                                                   'rule'])):
     """Namedtuple representing a :class:`~Collection`.
 
 It includes a method to return its JSON version.
@@ -75,6 +76,7 @@ It includes a method to return its JSON version.
    mail: mail address of the owner
    ts: creation of the collection
    restrictedtotype: Type restriction for the members of this collection
+   rule: Expression with wildcards to compare with all collection names
 
 :platform: Any
 """
@@ -96,8 +98,9 @@ It includes a method to return its JSON version.
                      'name': self.name,
                      'creation': self.ts,
                      'capabilities': auxCap,
+                     'rule': self.rule,
                      'properties': {'ownership': self.mail,
-                                    'license': '',
+                                    'license': 'CC-BY',
                                     'hasAccessRestrictions': False,
                                     'memberOf': ()
                                     }
@@ -119,7 +122,7 @@ class Collections(object):
 :type limit: int
 """
         self.cursor = conn.cursor()
-        query = 'select c.id, c.pid, c.name, u.mail, ts, d.name from '
+        query = 'select c.id, c.pid, c.name, u.mail, ts, d.name, c.rule from '
         query = query + 'collection as c inner join user as u on c.owner = '
         query = query + 'u.id left join datatype as d on c.restrictedtotype = d.id'
 
@@ -230,11 +233,11 @@ class Collection(CollectionBase):
         # If no filters are given then return an empty object
         if ((collID is None) and (pid is None)):
             self = super(Collection, cls).__new__(cls, None, None, None, None,
-                                                  None, None)
+                                                  None, None, None)
             return self
 
         cursor = conn.cursor()
-        query = 'select c.id, c.pid, c.name, u.mail, ts, d.name from collection as c '
+        query = 'select c.id, c.pid, c.name, u.mail, ts, d.name, c.rule from collection as c '
         query = query + 'inner join user as u on c.owner = u.id '
         query = query + 'left join datatype as d on c.restrictedtotype = d.id '
 
@@ -262,7 +265,7 @@ class Collection(CollectionBase):
         return self
 
     def insert(self, conn, name=None, owner=None, pid=None,
-               restrictedtotype=None):
+               restrictedtotype=None, rule=None):
         """Insert a new collection in the MySQL DB.
 
 :param conn: Connection to the MySQL DB.
@@ -275,6 +278,8 @@ class Collection(CollectionBase):
 :type pid: string
 :param restrictedtotype: Datatype of the members of the collection.
 :type restrictedtotype: string
+:param rule: Pattern with wildcards to be compared with collection names.
+:type rule: string
 :returns: A new collection.
 :rtype: :class:`~CollectionBase`
 :raise: Exception
@@ -314,12 +319,12 @@ class Collection(CollectionBase):
         # Read datatype ID
         did = cursor.fetchone()[0]
 
-        query = 'insert into collection (pid, name, owner, restrictedtotype) values (%s, %s, %s, %s)'
-        sqlParams = [pid, name, uid, did]
+        query = 'insert into collection (pid, name, owner, restrictedtotype, rule) values (%s, %s, %s, %s, %s)'
+        sqlParams = [pid, name, uid, did, rule]
         cursor.execute(query, tuple(sqlParams))
         conn.commit()
 
-        query = 'select id, pid, name, %s, ts, %s from collection where name = %s '
+        query = 'select id, pid, name, %s, ts, %s, rule from collection where name = %s '
         query = query + 'and pid = %s and owner = %s and restrictedtotype = %s'
         cursor.execute(query, (owner, restrictedtotype, name, pid, uid, did))
         coll = cursor.fetchone()
@@ -330,7 +335,7 @@ class Collection(CollectionBase):
         self = super(Collection, self).__new__(type(self), *coll)
         return self
 
-    def update(self, conn, name=None, owner=None, pid=None, restrictedtotype=None):
+    def update(self, conn, name=None, owner=None, pid=None, restrictedtotype=None, rule=None):
         """Update the fields passed as parameters in the MySQL DB.
 
 :param conn: Connection to the MySQL DB.
@@ -343,6 +348,8 @@ class Collection(CollectionBase):
 :type pid: string
 :param restrictedtotype: Datatype of the members of the collection.
 :type restrictedtotype: string
+:param rule: Pattern with wildcards to be compared to collection names.
+:type rule: string
 :returns: The updated collection.
 :rtype: :class:`~CollectionBase`
 :raise: Exception
@@ -384,12 +391,12 @@ class Collection(CollectionBase):
         did = cursor.fetchone()[0]
 
         query = 'update collection set pid=%s, owner=%s, ts=DEFAULT, ' + \
-            'restrictedtotype=%s, name=%s where id=%s'
-        sqlParams = [pid, uid, did, name, self.id]
+            'restrictedtotype=%s, name=%s, rule=%s where id=%s'
+        sqlParams = [pid, uid, did, name, rule, self.id]
         cursor.execute(query, tuple(sqlParams))
         conn.commit()
 
-        query = 'select id, pid, name, %s, ts, %s from collection where id = %s'
+        query = 'select id, pid, name, %s, ts, %s, rule from collection where id = %s'
         cursor.execute(query, (owner, restrictedtotype, self.id))
         coll = cursor.fetchone()
         cursor.close()
