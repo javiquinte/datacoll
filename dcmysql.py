@@ -259,9 +259,9 @@ class Collection(CollectionBase):
         if collID is not None:
             whereClause.append('c.id = %s')
             sqlParams.append(collID)
-
-        if pid is not None:
-            whereClause.append('c.pid = %s')
+        else:
+            whereClause.append('c.pid = %s' if pid is not None
+                               else 'c.pid is %s')
             sqlParams.append(pid)
 
         if len(sqlParams):
@@ -337,10 +337,24 @@ class Collection(CollectionBase):
         cursor.execute(query, tuple(sqlParams))
         conn.commit()
 
-        query = 'select id, pid, name, %s, ts, %s, rule from collection '
-        query = query + 'where name = %s and pid = %s and owner = %s and '
-        query = query + 'restrictedtotype = %s'
-        cursor.execute(query, (owner, restrictedtotype, name, pid, uid, did))
+        whereClause = list()
+        sqlParams = list()
+
+        query = 'select id, pid, name, %s, ts, %s, rule from collection'
+        sqlParams.extend([owner, restrictedtotype])
+
+        whereClause.append('name = %s' if name is not None else 'name is %s')
+        sqlParams.append(name)
+
+        whereClause.append('pid = %s' if pid is not None else 'pid is %s')
+        sqlParams.append(pid)
+
+        whereClause.append('owner = %s' if uid is not None else 'owner is %s')
+        sqlParams.append(uid)
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        cursor.execute(query, tuple(sqlParams))
         coll = cursor.fetchone()
         cursor.close()
         if coll is None:
@@ -646,7 +660,6 @@ class Member(MemberBase):
         cursor.close()
         self = super(Member, self).__new__(type(self), *member)
         return self
-
 
     def update(self, conn, id=None, pid=None, location=None, checksum=None,
                datatype=None):
