@@ -532,14 +532,14 @@ class Member(MemberBase):
         if id is not None:
             whereClause.append('m.id = %s')
             sqlParams.append(id)
+        else:
+            if pid is not None:
+                whereClause.append('m.pid = %s')
+                sqlParams.append(pid)
 
-        if pid is not None:
-            whereClause.append('m.pid = %s')
-            sqlParams.append(pid)
-
-        if location is not None:
-            whereClause.append('m.location = %s')
-            sqlParams.append(location)
+            if location is not None:
+                whereClause.append('m.location = %s')
+                sqlParams.append(location)
 
         if len(sqlParams):
             query = query + ' where ' + ' and '.join(whereClause)
