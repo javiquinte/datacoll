@@ -6,9 +6,11 @@ from irods.models import DataObject
 from irods.models import Collection
 import urllib2 as ul
 
-years = ['1993']
+years = ['1993', '1994', '1995', '1996', '1997', '1998', '1999', '2000',
+         '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008',
+         '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016']
 nets = ['GE']
-stations = ['DSB', 'MORC', 'PMG']
+# stations = ['GIO', 'DSB', 'KBS', 'MLR', 'MORC', 'PMG', 'STU', 'WLF']
 channels = ['BHN.D','BHE.D',  'BHZ.D', 'HHN.D', 'HHE.D', 'HHZ.D']
 
 dcUrl = 'http://localhost:8080/rda/datacoll'
@@ -25,7 +27,6 @@ def createColl(name):
     print 'Creating collection with name = %s' % name
 
     jsonColl = {
-        "pid": name,
         "name": name,
         "capabilities": {
             "restrictedToType": "miniSEED"
@@ -50,9 +51,9 @@ def createMember(collID, do):
 
     Return either the member or an error message (both in json format).
     """
-    print 'Creating member with name = %s' % do.name
+    # print 'Creating member with name = %s' % do.name
 
-    jsonMember = {"location": "http://localhost:8000/api/registered" + \
+    jsonMember = {"location": "http://sec24c79.gfz-potsdam.de:8000/api/registered" + \
                   do.path + "?download=true",
                   "checksum": do.checksum,
                   "datatype": "miniSEED"
@@ -78,8 +79,8 @@ for yc in i.listDir(root).subcollections:
             continue
 
         for sc in nc.subcollections:
-            if sc.name not in stations:
-                continue
+            # if sc.name not in stations:
+            #     continue
 
             for cc in sc.subcollections:
                 if cc.name not in channels:
