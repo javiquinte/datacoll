@@ -27,7 +27,7 @@ from collections import namedtuple
 # For the time being these are the capabilities for the datasets
 # coming from the user requests.
 capabilitiesFixed = {
-                     'isOrdered': False,
+                     'isOrdered': True,
                      'appendsToEnd': True,
                      'supportsRoles': False,
                      'membershipIsMutable': True,
