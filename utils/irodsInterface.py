@@ -8,42 +8,40 @@
 
 import os
 import logging
-import datetime
 import json
 import irods
-from irods.meta import iRODSMeta
 from irods.models import DataObject
-from irods.models import Collection
-from irods.models import Resource
-from irods.models import User
-from irods.models import DataObjectMeta
-from irods.models import CollectionMeta
-from irods.models import ResourceMeta
-from irods.models import UserMeta
 from irods.session import iRODSSession
-from irods.column import Column, Keyword
-from irods.results import ResultSet
-
-import subprocess
 
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
 
-# Class managing the access to the iRODS federation
-# Contains the utility methods to interact with metadata, collections &
-# dataObject
+# from irods.meta import iRODSMeta
+# from irods.models import Collection
+# from irods.models import Resource
+# from irods.models import User
+# from irods.models import DataObjectMeta
+# from irods.models import CollectionMeta
+# from irods.models import ResourceMeta
+# from irods.models import UserMeta
+# from irods.column import Column, Keyword
+# from irods.results import ResultSet
 
 
 class irodsFile(object):
+    """Manage the access to a file stored in iRODS."""
+
     def __init__(self, session, filename):
+        """Constructor of the irodsFile class."""
         self.sess = session
         self.fullPath = filename
         self.filename = os.path.basename(filename)
         self.content_type = 'application/octet-stream'
 
     def __iter__(self):
+        """Iterator to read the file."""
         blockSize = 500 * 1024
 
         try:
@@ -61,8 +59,14 @@ class irodsFile(object):
 
 
 class irodsInterface(object):
+    """Manage the access to the iRODS federation.
+
+    Contains the utility methods to interact with metadata, collections &
+    dataObject.
+    """
 
     def __init__(self, config='b2http.cfg'):
+        """Constructor of the irodsInterface class."""
         cp = configparser.RawConfigParser()
         cp.read(config)
         host = cp.get('iRODS', 'host')
@@ -81,16 +85,14 @@ class irodsInterface(object):
         return self.sess
 
     def getFile(self, filename):
+        """Get an iterator to read the file."""
         if not os.path.basename(filename).startswith('GE.'):
             errmsg = 'Only files from GE can be downloaded.'
             response = {'Meta': {'elements': 0,
                                  'errors': 1,
-                                 'status': 404
-                                },
+                                 'status': 404},
                         'Response': {'data': None,
-                                     'errors': errmsg
-                                    }
-                       }
+                                     'errors': errmsg}}
             raise Exception(json.dumps(response))
 
         result = None
@@ -104,30 +106,26 @@ class irodsInterface(object):
         return result
 
     def getMetadata(self, fullPath=None):
-        """Return a list of tuples like (id, name, units, value). """
+        """Return a list of tuples like (id, name, units, value)."""
         meta = self.sess.metadata.get(DataObject, fullPath)
         return meta
 
     def listFile(self, fullPath=None):
+        """Retrieve basic information from a file."""
         try:
             do = self.sess.data_objects.get(fullPath)
             response = {'Meta': {'elements': 1,
                                  'errors': 0,
-                                 'status': 200
-                                },
+                                 'status': 200},
                         'Response': {'data': [do.name],
-                                     'errors': None
-                                    }
-                       }
+                                     'errors': None}}
         except Exception as e:
             response = {'Meta': {'elements': 0,
                                  'errors': 1,
-                                 'status': 404
-                                },
+                                 'status': 404},
                         'Response': {'data': None,
-                                     'errors': 'File not found or inaccessible'
-                                    }
-                       }
+                                     'errors':
+                                     'File not found or inaccessible'}}
             print(str(e))
         return json.dumps(response)
 

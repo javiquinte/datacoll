@@ -66,8 +66,8 @@ class MemberAPI(object):
     def __init__(self, conn):
         """Constructor of the MemberAPI class.
 
-:param conn: Connection to the MySQL DB.
-:type conn: MySQLdb.connections.Connection
+        :param conn: Connection to the MySQL DB.
+        :type conn: MySQLdb.connections.Connection
         """
         self.conn = conn
 
@@ -75,14 +75,14 @@ class MemberAPI(object):
     def DELETE(self, collID, memberID):
         """Delete a single member from a collection.
 
-:param collID: Collection ID.
-:type collID: int
-:param memberID: Member ID.
-:type memberID: int
-:returns: Empty string
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :param memberID: Member ID.
+        :type memberID: int
+        :returns: Empty string
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -102,14 +102,14 @@ class MemberAPI(object):
     def download(self, collID, memberID):
         """Download a single collection member in JSON format.
 
-:param collID: Collection ID.
-:type collID: int
-:param memberID: Member ID.
-:type memberID: int
-:returns: An iterable object which downloads the member of a collection.
-:rtype: :class:`~urlFile`
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :param memberID: Member ID.
+        :type memberID: int
+        :returns: Iterable object which downloads the member of a collection.
+        :rtype: :class:`~urlFile`
+        :raises: cherrypy.HTTPError
+        """
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -135,14 +135,14 @@ class MemberAPI(object):
     def GET(self, collID, memberID):
         """Return a single collection member in JSON format.
 
-:param collID: Collection ID.
-:type collID: int
-:param memberID: Member ID.
-:type memberID: int
-:returns: Metadata related to a member of a collection in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :param memberID: Member ID.
+        :type memberID: int
+        :returns: Metadata related to a member of a collection in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         try:
             member = Member(self.conn, collID=collID, id=memberID)
         except:
@@ -160,14 +160,14 @@ class MemberAPI(object):
     def PUT(self, collID, memberID):
         """Update an existing member.
 
-:param collID: Collection ID.
-:type collID: int
-:param memberID: Member ID.
-:type memberID: int
-:returns: Metadata related to the updated member in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :param memberID: Member ID.
+        :type memberID: int
+        :returns: Metadata related to the updated member in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -255,11 +255,11 @@ class MembersAPI(object):
     def GET(self, collID):
         """Return a list of collection members in JSON format.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Metadata related to all members of a collection in JSON format.
-:rtype: string
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Metadata from all members of a collection in JSON format.
+        :rtype: string
+        """
         membList = Members(self.conn, collID=collID)
 
         # If no ID is given iterate through all collections in cursor
@@ -270,12 +270,12 @@ class MembersAPI(object):
     def POST(self, collID):
         """Add a new member to an existing collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Metadata related to the new member in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Metadata related to the new member in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -347,11 +347,11 @@ class CollectionsAPI(object):
     def GET(self, filter_by_owner=None):
         """Return a list of collections.
 
-:param filter_by_owner: Mail from the owner of the collection.
-:type filter_by_owner: string
-:returns: Metadata related to all collections in JSON format.
-:rtype: string
-"""
+        :param filter_by_owner: Mail from the owner of the collection.
+        :type filter_by_owner: string
+        :returns: Metadata related to all collections in JSON format.
+        :rtype: string
+        """
         coll = Collections(self.conn, owner=filter_by_owner)
 
         # If no ID is given iterate through all collections in cursor
@@ -362,10 +362,10 @@ class CollectionsAPI(object):
     def POST(self):
         """Create a new collection.
 
-:returns: Metadata related to the new collection in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :returns: Metadata related to the new collection in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
@@ -382,7 +382,8 @@ class CollectionsAPI(object):
         except:
             name = None
         try:
-            restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+            jc = jsonColl['capabilities']
+            restrictedtotype = jc['restrictedToType'].strip()
         except:
             restrictedtotype = None
         try:
@@ -406,8 +407,10 @@ class CollectionsAPI(object):
 
         try:
             # It is important to call insert inline with an empty Collection!
-            coll = Collection(None).insert(self.conn, owner=owner, pid=pid, name=name,
-                                           restrictedtotype=restrictedtotype, rule=rule)
+            coll = Collection(None).insert(self.conn, owner=owner, pid=pid,
+                                           name=name,
+                                           restrictedtotype=restrictedtotype,
+                                           rule=rule)
         except:
             # Send Error 400
             messDict = {'code': 0,
@@ -433,18 +436,19 @@ class CollectionAPI(object):
     def download(self, collID):
         """Download a complete collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Contents of the collection concatenated.
-:rtype: bytestream
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Contents of the collection concatenated.
+        :rtype: bytestream
+        """
         members = Members(self.conn, collID=collID)
 
         # Read one member because an ID is given. Check that there is
         # something to return (result set not empty)
         member = members.fetchone()
         if member:
-            cherrypy.response.headers['Content-Type'] = 'application/octet-stream'
+            cherrypy.response.headers['Content-Type'] = \
+                'application/octet-stream'
         while member:
             # If the user wants to download the resource pointed by the member
             if member.pid is not None:
@@ -462,12 +466,12 @@ class CollectionAPI(object):
     def capabilities(self, collID):
         """Return the capabilities of a collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: The capabilities of the collection in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: The capabilities of the collection in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
         try:
@@ -489,12 +493,12 @@ class CollectionAPI(object):
     def PUT(self, collID):
         """Update an existing collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Metadata related to the updated collection in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Metadata related to the updated collection in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         try:
@@ -521,7 +525,8 @@ class CollectionAPI(object):
         except:
             name = None
         try:
-            restrictedtotype = jsonColl['capabilities']['restrictedToType'].strip()
+            jc = jsonColl['capabilities']
+            restrictedtotype = jc['restrictedToType'].strip()
         except:
             restrictedtotype = None
         try:
@@ -530,7 +535,8 @@ class CollectionAPI(object):
             rule = None
 
         # FIXME I must check if the object coll is being updated as in the DB!
-        coll.update(name=name, owner=owner, pid=pid, restrictedtotype=restrictedtotype, rule=rule)
+        coll.update(name=name, owner=owner, pid=pid,
+                    restrictedtotype=restrictedtotype, rule=rule)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON()
@@ -539,12 +545,12 @@ class CollectionAPI(object):
     def DELETE(self, collID):
         """Delete a single collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Empty string.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Empty string.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         try:
             coll = Collection(self.conn, collID=collID)
         except:
@@ -561,12 +567,12 @@ class CollectionAPI(object):
     def GET(self, collID):
         """Return a single collection.
 
-:param collID: Collection ID.
-:type collID: int
-:returns: Metadata related to the collection in JSON format.
-:rtype: string
-:raises: cherrypy.HTTPError
-"""
+        :param collID: Collection ID.
+        :type collID: int
+        :returns: Metadata related to the collection in JSON format.
+        :rtype: string
+        :raises: cherrypy.HTTPError
+        """
         try:
             coll = Collection(self.conn, collID=collID)
         except:
@@ -652,9 +658,9 @@ class DataColl(object):
     def features(self):
         """Read the features of the system and return them in JSON format.
 
-:returns: System capabilities in JSON format
-:rtype: string
-"""
+        :returns: System capabilities in JSON format
+        :rtype: string
+        """
         syscapab = {
                      "providesCollectionPids": False,
                      "collectionPidProviderType": "string",
@@ -674,9 +680,9 @@ class DataColl(object):
     def version(self):
         """Return the version of this implementation.
 
-:returns: System capabilities in JSON format
-:rtype: string
-"""
+        :returns: System capabilities in JSON format
+        :rtype: string
+        """
         cherrypy.response.header_list = [('Content-Type', 'text/plain')]
         return version
 

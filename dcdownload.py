@@ -22,13 +22,12 @@
 import os
 import logging
 import json
-import datetime
 import configparser
 import cgi
 import MySQLdb
-from collections import namedtuple
 from wsgicomm import WINotFoundError
 from wsgicomm import WIRedirect
+
 
 class DC_Module(object):
     """Plugable module for the main :class:`~DCApp` object.
@@ -47,6 +46,7 @@ class DC_Module(object):
     """
 
     def __init__(self, dc, confFile='../datacoll.cfg'):
+        """Constructor from DC_Module."""
         dc.registerAction('GET', ("collections", "*", "members", "*",
                                   "download"), self.memberDownload)
 
@@ -78,9 +78,9 @@ class DC_Module(object):
         :raises: WIRedirect, WINotFoundError
 
         """
-
-        # The keep_blank_values=1 is needed to recognize the download key despite
-        # that it has no value associated (e.g. api/registered/fullpath?download)
+        # The keep_blank_values=1 is needed to recognize the download key
+        # despite that it has no value associated.
+        # (e.g. api/registered/fullpath?download)
         form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ,
                                 keep_blank_values=1)
 
@@ -98,8 +98,8 @@ class DC_Module(object):
             mid = None
 
         cursor = self.conn.cursor()
-        query = 'select m.pid, m.url from member as m inner join collection as c on '
-        query = query + 'm.cid = c.id'
+        query = 'select m.pid, m.url from member as m inner join collection '
+        query = query + 'as c on m.cid = c.id'
 
         whereClause = list()
         whereClause.append('c.id = %s')
@@ -120,8 +120,7 @@ class DC_Module(object):
             cursor.execute(query, tuple(sqlParams))
         except:
             messDict = {'code': 0,
-                        'message': 'Requested property %s not found' % prop
-                       }
+                        'message': 'Error searching for member %s' % mid}
             message = json.dumps(messDict)
             raise WINotFoundError(message)
 
