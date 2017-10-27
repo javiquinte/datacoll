@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Data Collection WS - prototype
 #
@@ -36,11 +36,7 @@ from dcmysql import Member
 from dcmysql import Members
 from dcmysql import JSONFactory
 from dcmysql import urlFile
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 
 version = '0.2a1.dev1'
 
