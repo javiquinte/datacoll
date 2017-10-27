@@ -21,7 +21,7 @@
 
 import json
 import datetime
-import urllib2 as ul
+import urllib as ul
 from collections import namedtuple
 
 # For the time being these are the capabilities for the datasets
