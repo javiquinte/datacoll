@@ -158,7 +158,7 @@ class CollectionAPI(object):
     @cherrypy.expose
     def index(self, collid=None):
         if cherrypy.request.method == 'GET':
-            self.get(collid)
+            return self.get(collid)
 
         if cherrypy.request.method == 'POST':
             self.post(collid)
@@ -317,10 +317,10 @@ class CollectionAPI(object):
             return JSONFactory(coll, Collection)
 
         try:
-            coll = Collection(conn, collID=collID)
+            coll = Collection(conn, collid=collid)
         except:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
+                        'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
             raise cherrypy.HTTPError(404, message)
 
@@ -541,4 +541,4 @@ class MemberAPI(object):
 
 
 if __name__ == '__main__':
-    cherrypy.quickstart(Application())
+    cherrypy.quickstart(Application(), script_name='/rda/datacoll')
