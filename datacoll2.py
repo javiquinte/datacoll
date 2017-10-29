@@ -72,7 +72,6 @@ conn = MySQLdb.connect(host, user, password, db)
 
 class Application(object):
     def __init__(self):
-        # print('Application.__init__')
         self.collections = CollectionAPI()
 
     @cherrypy.expose
@@ -108,16 +107,10 @@ class Application(object):
         return json.dumps(syscapab)
 
 
-class NotImplemented(object):
-    def index(self, **args):
-        return 'Method not implemented.'
-
-
 @cherrypy.popargs('collid')
 class CollectionAPI(object):
     def __init__(self):
         self.members = MemberAPI()
-        self.ops = NotImplemented()
 
     @cherrypy.expose
     def capabilities(self, collid):
@@ -540,4 +533,5 @@ class MemberAPI(object):
 
 
 if __name__ == '__main__':
-    cherrypy.quickstart(Application(), script_name='/rda/datacoll')
+    config = {'/': {'tools.trailing_slash.on': False}}
+    cherrypy.quickstart(Application(), script_name='/rda/datacoll', config=config)
