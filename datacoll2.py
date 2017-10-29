@@ -83,7 +83,7 @@ class Application(object):
     def version(self):
         """Return the version of this implementation.
 
-        :returns: System capabilities in JSON format
+        :returns: System version in JSON format
         :rtype: string
         """
         cherrypy.response.header_list = [('Content-Type', 'text/plain')]
@@ -137,7 +137,7 @@ class CollectionAPI(object):
         auxCap['restrictedtotype'] = coll.restrictedtotype
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(auxCap)
+        return json.dumps(auxCap).encode()
 
     @cherrypy.expose
     def index(self, collid=None):
