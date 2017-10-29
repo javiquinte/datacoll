@@ -527,7 +527,7 @@ class Member(MemberBase):
 
         if collid is not None:
             whereClause.append('m.cid = %s')
-            sqlParams.append(collID)
+            sqlParams.append(collid)
 
         if memberid is not None:
             whereClause.append('m.id = %s')
