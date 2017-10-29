@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Tests to check the minimum Data Collection Service functionality is OK.
 
@@ -20,8 +20,11 @@ any later version.
 import sys
 import os
 import unittest
-import urllib2
+import urllib
 import json
+from urllib.request import Request
+from urllib.request import urlopen
+from urllib.request import HTTPError
 
 here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
@@ -38,10 +41,10 @@ class DataCollTests(unittest.TestCase):
 
     def test_features(self):
         """'features' method of the system."""
-        req = urllib2.Request('%s/features' % self.host)
+        req = Request('%s/features' % self.host)
         # Call the features method
         try:
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             feat = json.loads(u.read())
             # Check that the error code is 200
             self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
@@ -60,11 +63,11 @@ class DataCollTests(unittest.TestCase):
         """Rule based Collection."""
         with open('new-coll.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req = Request('%s/collections' % self.host, data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a collection
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 coll = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -74,12 +77,12 @@ class DataCollTests(unittest.TestCase):
 
         with open('new-memb.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections/%d/members' %
-                                  (self.host, coll['collid']), data=data)
+            req = Request('%s/collections/%d/members' %
+                          (self.host, coll['collid']), data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a member
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -88,10 +91,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query the member to check it has been properly created
-            req = urllib2.Request('%s/collections/%d/members/%d' %
+            req = Request('%s/collections/%d/members/%d' %
                                   (self.host, coll['collid'], memb['memberid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb2 = json.loads(u.read())
                 # Check that error code is 200
                 self.assertEqual(u.getcode(), 200,
@@ -107,11 +110,11 @@ class DataCollTests(unittest.TestCase):
 
         with open('new-coll-rule.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req = Request('%s/collections' % self.host, data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a collection
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 collrule = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -120,10 +123,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query all the members belonging to the collection
-            req = urllib2.Request('%s/collections/%d/members/' %
-                                  (self.host, collrule['collid']))
+            req = Request('%s/collections/%d/members/' %
+                          (self.host, collrule['collid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb2 = json.loads(u.read())
                 # Check that error code is 200
                 self.assertEqual(u.getcode(), 200,
@@ -135,26 +138,26 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Delete the member
-            req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['collid'], memb['memberid']))
+            req = Request('%s/collections/%d/members/%d' %
+                          (self.host, coll['collid'], memb['memberid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             self.assertEqual(u.getcode(), 200,
                              'HTTP Error code 200 was expected!')
 
             # Delete the collection
-            req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['collid']))
+            req = Request('%s/collections/%d' %
+                                 (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             self.assertEqual(u.getcode(), 200,
                              'HTTP Error code 200 was expected!')
 
             # Delete the collection with rule
-            req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, collrule['collid']))
+            req = Request('%s/collections/%d' %
+                          (self.host, collrule['collid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             self.assertEqual(u.getcode(), 200,
                              'HTTP Error code 200 was expected!')
             return
@@ -163,11 +166,11 @@ class DataCollTests(unittest.TestCase):
         """Creation, query and deletion of a Member of a Collection."""
         with open('new-coll.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req = Request('%s/collections' % self.host, data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a collection
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 coll = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -177,12 +180,12 @@ class DataCollTests(unittest.TestCase):
 
         with open('new-memb.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections/%d/members' %
-                                  (self.host, coll['collid']), data=data)
+            req = Request('%s/collections/%d/members' %
+                          (self.host, coll['collid']), data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a member
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -191,10 +194,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query the member to check it has been properly created
-            req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['collid'], memb['memberid']))
+            req = Request('%s/collections/%d/members/%d' %
+                          (self.host, coll['collid'], memb['memberid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb2 = json.loads(u.read())
                 # Check that error code is 200
                 self.assertEqual(u.getcode(), 200,
@@ -209,10 +212,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query all the members belonging to the collection
-            req = urllib2.Request('%s/collections/%d/members/' %
-                                  (self.host, coll['collid']))
+            req = Request('%s/collections/%d/members/' %
+                          (self.host, coll['collid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 memb2 = json.loads(u.read())
                 # Check that error code is 200
                 self.assertEqual(u.getcode(), 200,
@@ -237,18 +240,18 @@ class DataCollTests(unittest.TestCase):
             #     self.assertTrue(False, 'Error: %s' % e)
 
             # Delete the member
-            req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['collid'], memb['memberid']))
+            req = Request('%s/collections/%d/members/%d' %
+                          (self.host, coll['collid'], memb['memberid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             self.assertEqual(u.getcode(), 200,
                              'HTTP Error code 200 was expected!')
 
             # Delete the collection
-            req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['collid']))
+            req = Request('%s/collections/%d' %
+                          (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             self.assertEqual(u.getcode(), 200,
                              'HTTP Error code 200 was expected!')
             return
@@ -257,11 +260,11 @@ class DataCollTests(unittest.TestCase):
         """Creation, query and deletion of a Collection."""
         with open('new-coll.json') as fin:
             data = fin.read()
-            req = urllib2.Request('%s/collections' % self.host, data=data)
+            req = Request('%s/collections' % self.host, data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a collection
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 coll = json.loads(u.read())
                 # Check that I received a 201 code
                 self.assertEqual(u.getcode(), 201,
@@ -270,10 +273,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query the collection to check it has been properly created
-            req = urllib2.Request('%s/collections/%d' %
+            req = Request('%s/collections/%d' %
                                   (self.host, coll['collid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 coll2 = json.loads(u.read())
                 # Check that I received a 200 code
                 self.assertEqual(u.getcode(), 200,
@@ -288,10 +291,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Query the collection capabilities
-            req = urllib2.Request('%s/collections/%d/capabilities' %
-                                  (self.host, coll['collid']))
+            req = Request('%s/collections/%d/capabilities' %
+                                 (self.host, coll['collid']))
             try:
-                u = urllib2.urlopen(req)
+                u = urlopen(req)
                 capab = json.loads(u.read())
                 # Check that I received a 200 code
                 self.assertEqual(u.getcode(), 200,
@@ -303,10 +306,10 @@ class DataCollTests(unittest.TestCase):
                 self.assertTrue(False, 'Error: %s' % e)
 
             # Delete the collection
-            req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['collid']))
+            req = Request('%s/collections/%d' %
+                                 (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
-            u = urllib2.urlopen(req)
+            u = urlopen(req)
             # Check that I received a 200 code
             self.assertEqual(u.getcode(), 200, 'HTTP code 200 was expected!')
             return
