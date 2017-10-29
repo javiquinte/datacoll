@@ -771,7 +771,7 @@ class JSONFactory(object):
         # Send headers
         if self.status == 0:
             self.status = 1
-            return '{"contents": ['
+            return b'{"contents": ['
 
         # Headers have been closed. Raise StopIteration
         if self.status == 3:
@@ -782,12 +782,14 @@ class JSONFactory(object):
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
             self.status = 3
-            return ']}'
+            return b']}'
 
         if self.status == 1:
             self.status = 2
             # Send first collection
-            return reg.toJSON()
+            return reg.toJSON().encode()
         else:
             # Status=2 send a separator and a collection
-            return ', %s' % reg.toJSON()
+            return (', %s' % reg.toJSON()).encode()
+
+    __next__ = next
