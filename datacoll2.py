@@ -72,7 +72,7 @@ conn = MySQLdb.connect(host, user, password, db)
 
 class Application(object):
     def __init__(self):
-        print('Application.__init__')
+        # print('Application.__init__')
         self.collections = CollectionAPI()
 
     @cherrypy.expose
@@ -120,11 +120,11 @@ class CollectionAPI(object):
         self.ops = NotImplemented()
 
     @cherrypy.expose
-    def capabilities(self, collID):
+    def capabilities(self, collid):
         """Return the capabilities of a collection.
 
-        :param collID: Collection ID.
-        :type collID: int
+        :param collid: Collection ID.
+        :type collid: int
         :returns: The capabilities of the collection in JSON format.
         :rtype: string
         :raises: cherrypy.HTTPError
@@ -132,10 +132,10 @@ class CollectionAPI(object):
         # For the time being, these are fixed collections.
         # To be modified in the future with mutable collections
         try:
-            coll = Collection(conn, collID=collID)
+            coll = Collection(conn, collid=collid)
         except:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
+                        'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
@@ -153,13 +153,13 @@ class CollectionAPI(object):
             return self.get(collid)
 
         if cherrypy.request.method == 'POST':
-            self.post(collid)
+            return self.post(collid)
 
         if cherrypy.request.method == 'PUT':
-            self.put(collid)
+            return self.put(collid)
 
         if cherrypy.request.method == 'DELETE':
-            self.delete(collid)
+            return self.delete(collid)
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
@@ -171,6 +171,7 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         try:
@@ -179,6 +180,7 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collID}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         coll.delete(conn)
@@ -190,16 +192,18 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         try:
-            coll = Collection(conn, collID=collID)
+            coll = Collection(conn, collid=collid)
         except:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
+                        'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # Read only the fields that we support
@@ -234,13 +238,14 @@ class CollectionAPI(object):
                     restrictedtotype=restrictedtotype, rule=rule)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON()
+        return coll.toJSON().encode()
 
     def post(self, collid):
         if collid is not None:
             messDict = {'code': 0,
-                        'message': 'A collection ID (%s) was received while trying to create a Collection' % collID}
+                        'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         jsonColl = json.loads(cherrypy.request.body.fp.read())
@@ -299,7 +304,7 @@ class CollectionAPI(object):
 
         cherrypy.response.status = '201 Collection %s created' % str(pid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON()
+        return coll.toJSON().encode()
 
     def get(self, collid):
         if collid is None:
@@ -314,6 +319,7 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -333,20 +339,21 @@ class MemberAPI(object):
     @cherrypy.expose
     def index(self, collid, memberid=None):
         if cherrypy.request.method == 'GET':
-            self.get(collid, memberid)
+            return self.get(collid, memberid)
 
         if cherrypy.request.method == 'POST':
-            self.post(collid, memberid)
+            return self.post(collid, memberid)
 
         if cherrypy.request.method == 'PUT':
-            self.put(collid, memberid)
+            return self.put(collid, memberid)
 
         if cherrypy.request.method == 'DELETE':
-            self.delete(collid, memberid)
+            return self.delete(collid, memberid)
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
         message = json.dumps(messDict)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         raise cherrypy.HTTPError(400, message)
 
     def get(self, collid, memberid):
@@ -362,13 +369,13 @@ class MemberAPI(object):
         except:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
-                        % (memberID, collID)}
+                        % (memberid, collid)}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return member.toJSON()
+        return member.toJSON().encode()
 
     def post(self, collid, memberid):
         if memberid is not None:
@@ -388,11 +395,11 @@ class MemberAPI(object):
         index = jsonMemb.get('mappings', {}).get('index', None)
 
         try:
-            coll = Collection(conn, collID=collID)
+            coll = Collection(conn, collid=collid)
         except:
             # Send Error 404
             messDict = {'code': 0,
-                        'message': 'Collection %s not found!' % collID}
+                        'message': 'Collection %s not found!' % collid}
             message = json.dumps(messDict)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -411,7 +418,7 @@ class MemberAPI(object):
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
         try:
-            member = Member(None).insert(conn, collID=collID, pid=pid,
+            member = Member(None).insert(conn, collid=collid, pid=pid,
                                          location=location)
         except:
             msg = 'Member not properly saved. Error when querying it.'
@@ -425,7 +432,7 @@ class MemberAPI(object):
         cherrypy.response.status = '201 Member created (%s)' % \
             (pid if pid is not None else location)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return member.toJSON()
+        return member.toJSON().encode()
 
     def put(self, collid, memberid):
         if((collid is None) or (memberid is None)):
@@ -507,7 +514,7 @@ class MemberAPI(object):
             raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return memb.toJSON()
+        return memb.toJSON().encode()
 
     def delete(self, collid, memberid):
         if((collid is None) or (memberid is None)):
