@@ -33,24 +33,24 @@ Installation
 Requirements
 ------------
 
-* Python 2.7
-* CherryPy for Python 2.X
+* python 3.6
+* cherryPy for Python3
+* mysql DB
+* mysql driver
 
 .. _download:
 
 Download
 --------
 
-Download the tar file / source from the GEOFON web page at
-http://geofon.gfz-potsdam.de/software.
+Change to a directory where you want to run the service and get the source
+from the git repository at https://git.gfz-potsdam.de/javier/datacoll ::
+
+    $ git clone https://git.gfz-potsdam.de/javier/datacoll
+    $ cd datacoll
 
 .. note ::
    Nightly builds will be available soon from Github.
-
-Untar into a suitable directory such as `/var/www/rda/datacoll/` ::
-
-    $ cd /var/www/rda/datacoll
-    $ tar xvzf /path/to/tarfile.tgz
 
 This location will depend on the location of the root (in the file system)
 for your web server.
@@ -60,12 +60,19 @@ for your web server.
 Installation
 ------------
 
-This version of the Data Collection System runs as a standalone application.
+This version of the Data Collection System runs as a standalone application
+using the `cherrypy` web framework.
 There is no need to deploy it on top of Apache.
+
+But first the dependencies must be installed. ::
+
+    $ python3.6 -m pip install cherrypy
+    $ sudo apt install python3.6-dev
+    $ python3.6 -m pip install mysqlclient
 
 You can start the application by running: ::
 
-    $ python datacoll.py
+    $ python3.6 datacoll.py
     ENGINE Listening for SIGHUP.
     ENGINE Listening for SIGTERM.
     ENGINE Listening for SIGUSR1.
@@ -122,10 +129,10 @@ Installation problems
 
 Always check the log output for clues.
 
-If you visit http://localhost/rda/datacoll/version on your machine
+If you visit http://127.0.0.1:8080/rda/datacoll/version on your machine
 you should see the version information of the deployed service ::
 
-    0.1b1
+    0.2a1
 
 If this information cannot be retrieved, the installation was not successful.
 If this **does** show up, check that the information there looks correct.
