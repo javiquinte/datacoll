@@ -77,7 +77,8 @@ class Application(object):
 
     @cherrypy.expose
     def index(self):
-        return 'Help page in root location.'
+        cherrypy.response.header_list = [('Content-Type', 'text/html')]
+        return '<body><h1>Data Collections Service</h1></body>.'
 
     @cherrypy.expose
     def version(self):
@@ -107,26 +108,16 @@ class Application(object):
         return json.dumps(syscapab)
 
 
+class NotImplemented(object):
+    def index(self, **args):
+        return 'Method not implemented.'
+
+
 @cherrypy.popargs('collid')
 class CollectionAPI(object):
     def __init__(self):
         self.members = MemberAPI()
-
-    @cherrypy.expose
-    def ops(self, collID):
-        """Perform a certain operation on the collection.
-
-        :param collID: Collection ID.
-        :type collID: int
-        :raises: cherrypy.HTTPError
-        """
-        # For the time being, these are fixed collections.
-        # To be modified in the future with mutable collections
-        messDict = {'code': 0,
-                    'message': 'Operations not supported!'}
-        message = json.dumps(messDict)
-        cherrypy.response.headers['Content-Type'] = 'application/json'
-        raise cherrypy.HTTPError(400, message)
+        self.ops = NotImplemented()
 
     @cherrypy.expose
     def capabilities(self, collID):
@@ -157,6 +148,7 @@ class CollectionAPI(object):
 
     @cherrypy.expose
     def index(self, collid=None):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         if cherrypy.request.method == 'GET':
             return self.get(collid)
 
@@ -325,7 +317,7 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON()
+        return coll.toJSON().encode()
 
 
 @cherrypy.popargs('memberid')
