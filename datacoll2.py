@@ -168,10 +168,10 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(400, message)
 
         try:
-            coll = Collection(conn, collID=collID)
+            coll = Collection(conn, collid=collid)
         except:
             messDict = {'code': 0,
-                        'message': 'Collection ID %s not found' % collID}
+                        'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)

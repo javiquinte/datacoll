@@ -75,7 +75,7 @@ class DataCollTests(unittest.TestCase):
         with open('new-memb.json') as fin:
             data = fin.read()
             req = urllib2.Request('%s/collections/%d/members' %
-                                  (self.host, coll['id']), data=data)
+                                  (self.host, coll['collid']), data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a member
             try:
@@ -89,7 +89,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query the member to check it has been properly created
             req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['id'], memb['id']))
+                                  (self.host, coll['collid'], memb['memberid']))
             try:
                 u = urllib2.urlopen(req)
                 memb2 = json.loads(u.read())
@@ -97,7 +97,7 @@ class DataCollTests(unittest.TestCase):
                 self.assertEqual(u.getcode(), 200,
                                  'Error code 200 was expected!')
                 # Check that the ids are the same
-                self.assertEqual(memb['id'], memb2['id'], 'IDs differ!')
+                self.assertEqual(memb['memberid'], memb2['memberid'], 'IDs differ!')
                 # Compare owner with the original one
                 msg = 'Location recorded differ with the original one!'
                 self.assertEqual(json.loads(data)['location'],
@@ -121,7 +121,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query all the members belonging to the collection
             req = urllib2.Request('%s/collections/%d/members/' %
-                                  (self.host, collrule['id']))
+                                  (self.host, collrule['collid']))
             try:
                 u = urllib2.urlopen(req)
                 memb2 = json.loads(u.read())
@@ -136,7 +136,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the member
             req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['id'], memb['id']))
+                                  (self.host, coll['collid'], memb['memberid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             self.assertEqual(u.getcode(), 200,
@@ -144,7 +144,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the collection
             req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             self.assertEqual(u.getcode(), 200,
@@ -152,7 +152,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the collection with rule
             req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, collrule['id']))
+                                  (self.host, collrule['collid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             self.assertEqual(u.getcode(), 200,
@@ -178,7 +178,7 @@ class DataCollTests(unittest.TestCase):
         with open('new-memb.json') as fin:
             data = fin.read()
             req = urllib2.Request('%s/collections/%d/members' %
-                                  (self.host, coll['id']), data=data)
+                                  (self.host, coll['collid']), data=data)
             req.add_header("Content-Type", 'application/json')
             # Create a member
             try:
@@ -192,7 +192,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query the member to check it has been properly created
             req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['id'], memb['id']))
+                                  (self.host, coll['collid'], memb['memberid']))
             try:
                 u = urllib2.urlopen(req)
                 memb2 = json.loads(u.read())
@@ -200,7 +200,7 @@ class DataCollTests(unittest.TestCase):
                 self.assertEqual(u.getcode(), 200,
                                  'Error code 200 was expected!')
                 # Check that the ids are the same
-                self.assertEqual(memb['id'], memb2['id'], 'IDs differ!')
+                self.assertEqual(memb['memberid'], memb2['memberid'], 'IDs differ!')
                 # Compare owner with the original one
                 msg = 'Location recorded differ with the original one!'
                 self.assertEqual(json.loads(data)['location'],
@@ -210,7 +210,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query all the members belonging to the collection
             req = urllib2.Request('%s/collections/%d/members/' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             try:
                 u = urllib2.urlopen(req)
                 memb2 = json.loads(u.read())
@@ -238,7 +238,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the member
             req = urllib2.Request('%s/collections/%d/members/%d' %
-                                  (self.host, coll['id'], memb['id']))
+                                  (self.host, coll['collid'], memb['memberid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             self.assertEqual(u.getcode(), 200,
@@ -246,7 +246,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the collection
             req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             self.assertEqual(u.getcode(), 200,
@@ -271,7 +271,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query the collection to check it has been properly created
             req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             try:
                 u = urllib2.urlopen(req)
                 coll2 = json.loads(u.read())
@@ -279,7 +279,7 @@ class DataCollTests(unittest.TestCase):
                 self.assertEqual(u.getcode(), 200,
                                  'HTTP code 200 was expected!')
                 # Check that the ids are the same
-                self.assertEqual(coll['id'], coll2['id'], 'IDs differ!')
+                self.assertEqual(coll['collid'], coll2['collid'], 'IDs differ!')
                 # Compare owner with the original one
                 self.assertEqual(json.loads(data)['properties']['ownership'],
                                  coll2['properties']['ownership'],
@@ -289,7 +289,7 @@ class DataCollTests(unittest.TestCase):
 
             # Query the collection capabilities
             req = urllib2.Request('%s/collections/%d/capabilities' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             try:
                 u = urllib2.urlopen(req)
                 capab = json.loads(u.read())
@@ -304,7 +304,7 @@ class DataCollTests(unittest.TestCase):
 
             # Delete the collection
             req = urllib2.Request('%s/collections/%d' %
-                                  (self.host, coll['id']))
+                                  (self.host, coll['collid']))
             req.get_method = lambda: 'DELETE'
             u = urllib2.urlopen(req)
             # Check that I received a 200 code
