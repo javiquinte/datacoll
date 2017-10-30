@@ -70,6 +70,37 @@ limit = config.getint('mysql', 'limit')
 conn = MySQLdb.connect(host, user, password, db)
 
 
+def checktokensoft(f):
+    def checktokenintern(*a, **kw):
+        if 'token' in kw and kw['token'] is None:
+            del kw['token']
+        
+        if 'token' in kw and kw['token'] != 'javier@gfz-potsdam.de':
+            messDict = {'code': 0,
+                        'message': "Invalid token (%s)! javier's email was expected" % kw['token']}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
+
+        return f(*a, **kw)
+
+    return checktokenintern
+
+
+def checktokenhard(f):
+    def checktokenintern(*a, **kw):
+        if 'token' in kw and kw['token'] == 'javier@gfz-potsdam.de':
+            return f(*a, **kw)
+        
+        messDict = {'code': 0,
+                    'message': "Unauthorized access (%s)! javier's email was expected" % kw.get('token')}
+        message = json.dumps(messDict)
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+        raise cherrypy.HTTPError(401, message)
+
+    return checktokenintern
+
+
 class Application(object):
     def __init__(self):
         self.collections = CollectionAPI()
@@ -140,13 +171,19 @@ class CollectionAPI(object):
         return json.dumps(auxCap).encode()
 
     @cherrypy.expose
-    def index(self, collid=None):
+    def index(self, collid=None, **kwargs):
+        # try:
+        #     token = cherrypy.request.headers['Authentication'].split()
+        #     print(token)
+        # except:
+        #     token = None
+
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if cherrypy.request.method == 'GET':
-            return self.get(collid)
+            return self.get(collid, **kwargs)
 
         if cherrypy.request.method == 'POST':
-            return self.post(collid)
+            return self.post(collid, **kwargs)
 
         if cherrypy.request.method == 'PUT':
             return self.put(collid)
@@ -233,7 +270,8 @@ class CollectionAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON().encode()
 
-    def post(self, collid):
+    @checktokenhard
+    def post(self, collid, **kwargs):
         if collid is not None:
             messDict = {'code': 0,
                         'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
@@ -299,7 +337,8 @@ class CollectionAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON().encode()
 
-    def get(self, collid):
+    @checktokensoft
+    def get(self, collid, **kwargs):
         if collid is None:
             # If no ID is given iterate through all collections in cursor
             coll = Collections(conn)
