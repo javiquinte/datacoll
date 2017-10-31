@@ -137,6 +137,7 @@ def checktokenhard(f):
 
         try:
             if kw.get('access_token', None) is not None:
+                kw['access_token'] = urllib.parse.unquote(kw['access_token'])
                 verifysignature(kw['access_token'])
 
             return f(*a, **kw)
