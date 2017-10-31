@@ -29,6 +29,8 @@ import cherrypy
 import os
 import json
 import configparser
+import gnupg
+import datetime
 import MySQLdb
 from dcmysql import Collection
 from dcmysql import Collections
@@ -69,15 +71,51 @@ limit = config.getint('mysql', 'limit')
 
 conn = MySQLdb.connect(host, user, password, db)
 
+# Create the object to verify the signature in tokens
+gpg = gnupg.GPG(homedir='.gnupg')
+
+
+def verifysignature(access_token):
+    try:
+        verified = gpg.decrypt(access_token)
+
+    except Exception as e:
+        msg = "invalid token"
+        raise Exception("%s: %s" % (msg, str(e)))
+
+    if verified.trust_level is None or verified.trust_level < verified.TRUST_FULLY:
+        msg = "token has an invalid signature"
+        raise Exception(msg)
+
+    try:
+        attributes = json.loads(verified.data)
+        d1 = datetime.datetime.strptime(attributes['valid_until'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        lifetime = (datetime.datetime.utcnow() - d1).seconds
+
+    except Exception as e:
+        msg = "token has invalid validity"
+        raise Exception("%s: %s" % (msg, str(e)))
+
+    if lifetime <= 0:
+        msg = "token is expired"
+        raise Exception(msg)
+
 
 def checktokensoft(f):
     def checktokenintern(*a, **kw):
-        if 'token' in kw and kw['token'] is None:
-            del kw['token']
-        
-        if 'token' in kw and kw['token'] != 'javier@gfz-potsdam.de':
+        if kw.get('access_token', True) is None:
+            del kw['access_token']
+
+        if 'Authorization' in cherrypy.request.headers:
+            kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
+
+        try:
+            if kw.get('access_token', None) is not None:
+                verifysignature(kw['access_token'])
+
+        except Exception as e:
             messDict = {'code': 0,
-                        'message': "Invalid token (%s)! javier's email was expected" % kw['token']}
+                        'message': str(e)}
             message = json.dumps(messDict)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
@@ -89,14 +127,24 @@ def checktokensoft(f):
 
 def checktokenhard(f):
     def checktokenintern(*a, **kw):
-        if 'token' in kw and kw['token'] == 'javier@gfz-potsdam.de':
+        if 'Authorization' in cherrypy.request.headers:
+            kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
+
+        if kw.get('access_token', True) is None:
+            del kw['access_token']
+
+        try:
+            if kw.get('access_token', None) is not None:
+                verifysignature(kw['access_token'])
+
             return f(*a, **kw)
-        
-        messDict = {'code': 0,
-                    'message': "Unauthorized access (%s)! javier's email was expected" % kw.get('token')}
-        message = json.dumps(messDict)
-        cherrypy.response.headers['Content-Type'] = 'application/json'
-        raise cherrypy.HTTPError(401, message)
+
+        except Exception as e:
+            messDict = {'code': 0,
+                        'message': str(e)}
+            message = json.dumps(messDict)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
+            raise cherrypy.HTTPError(400, message)
 
     return checktokenintern
 
