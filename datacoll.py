@@ -108,6 +108,7 @@ def checktokensoft(f):
             del kw['access_token']
 
         if 'Authorization' in cherrypy.request.headers:
+            assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
             kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
 
         try:
@@ -130,6 +131,7 @@ def checktokensoft(f):
 def checktokenhard(f):
     def checktokenintern(*a, **kw):
         if 'Authorization' in cherrypy.request.headers:
+            assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
             kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
 
         if kw.get('access_token', True) is None:
