@@ -224,12 +224,6 @@ class CollectionAPI(object):
 
     @cherrypy.expose
     def index(self, collid=None, **kwargs):
-        # try:
-        #     token = cherrypy.request.headers['Authentication'].split()
-        #     print(token)
-        # except:
-        #     token = None
-
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if cherrypy.request.method == 'GET':
             return self.get(collid, **kwargs)
@@ -238,17 +232,18 @@ class CollectionAPI(object):
             return self.post(collid, **kwargs)
 
         if cherrypy.request.method == 'PUT':
-            return self.put(collid)
+            return self.put(collid, **kwargs)
 
         if cherrypy.request.method == 'DELETE':
-            return self.delete(collid)
+            return self.delete(collid, **kwargs)
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
         message = json.dumps(messDict)
         raise cherrypy.HTTPError(400, message)
 
-    def delete(self, collid):
+    @checktokenhard
+    def delete(self, collid, **kwargs):
         if collid is None:
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
@@ -269,7 +264,8 @@ class CollectionAPI(object):
 
         return ""
 
-    def put(self, collid):
+    @checktokenhard
+    def put(self, collid, **kwargs):
         if collid is None:
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
@@ -421,18 +417,18 @@ class MemberAPI(object):
         return 'Not implemented!'
 
     @cherrypy.expose
-    def index(self, collid, memberid=None):
+    def index(self, collid, memberid=None, **kwargs):
         if cherrypy.request.method == 'GET':
-            return self.get(collid, memberid)
+            return self.get(collid, memberid, **kwargs)
 
         if cherrypy.request.method == 'POST':
-            return self.post(collid, memberid)
+            return self.post(collid, memberid, **kwargs)
 
         if cherrypy.request.method == 'PUT':
-            return self.put(collid, memberid)
+            return self.put(collid, memberid, **kwargs)
 
         if cherrypy.request.method == 'DELETE':
-            return self.delete(collid, memberid)
+            return self.delete(collid, memberid, **kwargs)
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
@@ -440,7 +436,8 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         raise cherrypy.HTTPError(400, message)
 
-    def get(self, collid, memberid):
+    @checktokensoft
+    def get(self, collid, memberid, **kwargs):
         if memberid is None:
             membList = Members(conn, collid=collid)
 
@@ -461,7 +458,8 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return member.toJSON().encode()
 
-    def post(self, collid, memberid):
+    @checktokenhard
+    def post(self, collid, memberid, **kwargs):
         if memberid is not None:
             messDict = {'code': 0,
                         'message': 'Member ID received while trying to create it!'}
@@ -518,7 +516,8 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return member.toJSON().encode()
 
-    def put(self, collid, memberid):
+    @checktokenhard
+    def put(self, collid, memberid, **kwargs):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
@@ -600,7 +599,8 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return memb.toJSON().encode()
 
-    def delete(self, collid, memberid):
+    @checktokenhard
+    def delete(self, collid, memberid, **kwargs):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
