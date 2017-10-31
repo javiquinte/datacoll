@@ -31,6 +31,7 @@ import json
 import configparser
 import gnupg
 import datetime
+import urllib
 import MySQLdb
 from dcmysql import Collection
 from dcmysql import Collections
@@ -111,6 +112,7 @@ def checktokensoft(f):
 
         try:
             if kw.get('access_token', None) is not None:
+                kw['access_token'] = urllib.parse.unquote(kw['access_token'])
                 verifysignature(kw['access_token'])
 
         except Exception as e:
