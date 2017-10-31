@@ -40,7 +40,7 @@ from dcmysql import Members
 from dcmysql import JSONFactory
 from dcmysql import urlFile
 
-version = '0.2a1.dev1'
+version = '0.2a1'
 cfgfile = 'datacoll.cfg'
 
 # FIXME This is hardcoded but should be read from the configuration file
@@ -406,11 +406,18 @@ class CollectionAPI(object):
         return coll.toJSON().encode()
 
 
+class DownloadMemberAPI(object):
+    @cherrypy.expose
+    def index(self, collid, memberid, **kwargs):
+        url = Member(collid, memberid).download()
+        raise cherrypy.HTTPRedirect(url, 301)
+
+
 @cherrypy.popargs('memberid')
 class MemberAPI(object):
     def __init__(self):
         """Constructor of the DataColl object."""
-        pass
+        self.download = DownloadMemberAPI()
 
     @cherrypy.expose
     def properties(self, collid, memberid):

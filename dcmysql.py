@@ -557,6 +557,44 @@ class Member(MemberBase):
         self = super(Member, cls).__new__(cls, *member)
         return self
 
+    def download(self, conn):
+        """Download a Member from the MySQL DB.
+
+        :param conn: Connection to the MySQL DB.
+        :type conn: MySQLdb.connections.Connection
+        """
+        cursor = conn.cursor()
+        query = 'select m.pid, m.url from member as m inner join collection '
+        query = query + 'as c on m.cid = c.id'
+
+        whereClause = list()
+        whereClause.append('c.id = %s')
+        sqlParams = [self.collid]
+
+        whereClause.append('m.id = %s')
+        sqlParams.append(self.memberid)
+
+        query = query + ' where ' + ' and '.join(whereClause)
+
+        try:
+            cursor.execute(query, tuple(sqlParams))
+        except:
+            messDict = {'code': 0,
+                        'message': 'Error searching for member %s' % self.memberid}
+            message = json.dumps(messDict)
+            raise Exception(message)
+
+        # Get the PID and solve it through Handle
+        dbPid, dbUrl = cursor.fetchone()
+
+        if dbPid is not None:
+            url = 'http://hdl.handle.net/%s' % dbPid
+        else:
+            url = dbUrl
+
+        cursor.close()
+        return url
+
     def delete(self, conn):
         """Delete a Member from the MySQL DB.
 
