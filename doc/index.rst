@@ -68,6 +68,9 @@ But first the dependencies must be installed. ::
 
     $ python3.6 -m pip install cherrypy
     $ sudo apt install python3.6-dev
+    # This could be optional, but in some systems it was needed.
+    $ sudo apt install libmariadbclient-dev
+    # This is mandatory
     $ python3.6 -m pip install mysqlclient
 
 You can start the application by running: ::
