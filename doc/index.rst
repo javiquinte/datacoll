@@ -70,6 +70,7 @@ But first the dependencies must be installed. ::
     $ sudo apt install python3.6-dev
     # This could be optional, but in some systems it was needed.
     $ sudo apt install libmariadbclient-dev
+    $ sudo apt install libssl-dev
     # This is mandatory
     $ python3.6 -m pip install mysqlclient
 
