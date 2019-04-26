@@ -44,13 +44,11 @@ Download
 --------
 
 Change to a directory where you want to run the service and get the source
-from the git repository at https://git.gfz-potsdam.de/javier/datacoll ::
+from the git repository at https://github.com/javiquinte/datacoll ::
 
-    $ git clone https://git.gfz-potsdam.de/javier/datacoll
+    $ git clone https://github.com/javiquinte/datacoll.git
     $ cd datacoll
 
-.. note ::
-   Nightly builds will be available soon from Github.
 
 This location will depend on the location of the root (in the file system)
 for your web server.
