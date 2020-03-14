@@ -636,4 +636,5 @@ class MemberAPI(object):
 
 if __name__ == '__main__':
     config = {'/': {'tools.trailing_slash.on': False}}
+    cherrypy.server.socket_host = "0.0.0.0"
     cherrypy.quickstart(Application(), script_name='/rda/datacoll', config=config)
