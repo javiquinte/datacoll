@@ -32,15 +32,14 @@ import configparser
 import gnupg
 import datetime
 import urllib
-# import MySQLdb
-from dcmysql import Collection
-from dcmysql import Collections
-from dcmysql import Member
-from dcmysql import Members
-from dcmysql import JSONFactory
-from dcmysql import urlFile
+from pymongo import MongoClient
+from dcmongo import Collection
+from dcmongo import Collections
+from dcmongo import Member
+from dcmongo import Members
+from dcmongo import JSONFactory
 
-version = '0.2a1'
+version = '0.3a1'
 cfgfile = 'datacoll.cfg'
 
 # FIXME This is hardcoded but should be read from the configuration file
@@ -71,7 +70,8 @@ db = config.get('mysql', 'db')
 limit = config.getint('mysql', 'limit')
 
 # conn = MySQLdb.connect(host, user, password, db)
-conn = None
+client = MongoClient(host, 27017)
+conn = client['datacoll']
 
 # Create the object to verify the signature in tokens
 try:
