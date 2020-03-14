@@ -2,6 +2,8 @@ FROM mongo
 
 MAINTAINER Javier Quinteros
 
+WORKDIR /opt/datacoll
+
 RUN apt update && apt install -y python3-cherrypy3 python3-gnupg git && mkdir -p /opt
 RUN cd /opt && git clone https://github.com/javiquinte/datacoll.git && cd datacoll && git checkout mongo
 
@@ -13,4 +15,5 @@ EXPOSE 27017
 EXPOSE 28017
 EXPOSE 8080
 
-CMD ["/usr/bin/mongod --fork --syslog; cd /opt/datacoll; python3 datacoll.py"]
+# CMD ["/usr/bin/mongod --fork --syslog; cd /opt/datacoll; python3 datacoll.py"]
+CMD ["python3", "datacoll.py"]
