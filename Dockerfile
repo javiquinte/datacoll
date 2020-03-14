@@ -15,4 +15,4 @@ EXPOSE 27017
 EXPOSE 28017
 EXPOSE 8080
 
-CMD ["cd /opt/datacoll; python3 datacoll.py"]
+CMD ["mongod --fork --syslog; cd /opt/datacoll; python3 datacoll.py"]
