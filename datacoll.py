@@ -32,7 +32,7 @@ import configparser
 import gnupg
 import datetime
 import urllib
-import MySQLdb
+# import MySQLdb
 from dcmysql import Collection
 from dcmysql import Collections
 from dcmysql import Member
@@ -70,7 +70,8 @@ password = config.get('mysql', 'password')
 db = config.get('mysql', 'db')
 limit = config.getint('mysql', 'limit')
 
-conn = MySQLdb.connect(host, user, password, db)
+# conn = MySQLdb.connect(host, user, password, db)
+conn = None
 
 # Create the object to verify the signature in tokens
 gpg = gnupg.GPG(homedir='.gnupg')
