@@ -77,7 +77,7 @@ conn = None
 try:
     gpg = gnupg.GPG(homedir='.gnupg')
 except TypeError:
-    gpg = gnupg.GPG(gnuphome='.gnupg')
+    gpg = gnupg.GPG(gnupghome='.gnupg')
 
 
 def verifysignature(access_token):
