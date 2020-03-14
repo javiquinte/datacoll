@@ -74,7 +74,10 @@ limit = config.getint('mysql', 'limit')
 conn = None
 
 # Create the object to verify the signature in tokens
-gpg = gnupg.GPG(homedir='.gnupg')
+try:
+    gpg = gnupg.GPG(homedir='.gnupg')
+except TypeError:
+    gpg = gnupg.GPG(gnuphome='.gnupg')
 
 
 def verifysignature(access_token):
