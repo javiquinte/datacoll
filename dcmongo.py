@@ -127,7 +127,7 @@ class Members(object):
         clause = dict()
         # Filter by owner if present in the parameters
         if collid is not None:
-            clause['collid'] = collid
+            clause['_id'] = collid
 
         # TODO How to implement this?
         if limit:
