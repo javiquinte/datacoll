@@ -201,7 +201,7 @@ class Collection(object):
         :rtype: :class:`~InsertOneResult`
         :raise: Exception
         """
-        if '_id' in document and self._id != document['_id']:
+        if '_id' in document and self._id != str(document['_id']):
             raise Exception('IDs differ!')
 
         auxdoc = self.__conn.Collection.find_one_and_update({'_id': self._id},
