@@ -38,6 +38,10 @@ capabilitiesFixed = {
 class DCEncoder(json.JSONEncoder):
     def default(self, obj):
         # Objects lie IDs probably
+        if isinstance(obj, ObjectId):
+            return str(obj)
+
+        # Bytes to str
         if isinstance(obj, bytes):
             return obj.decode('utf-8')
 
