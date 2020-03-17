@@ -326,7 +326,7 @@ class CollectionAPI(object):
         try:
             # It is important to call insert inline with an empty Collection!
             insertedid = Collection(conn, collid).insert(jsonColl)
-            coll = Collection(conn, insertedid)
+            coll = Collection(conn, str(insertedid))
         except Exception:
             # Send Error 400
             messDict = {'code': 0,
