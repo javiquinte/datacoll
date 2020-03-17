@@ -22,6 +22,7 @@
 import json
 import urllib as ul
 import datetime
+from pymongo import ObjectId
 
 # For the time being these are the capabilities for the datasets
 # coming from the user requests.
@@ -127,7 +128,7 @@ class Members(object):
         clause = dict()
         # Filter by owner if present in the parameters
         if collid is not None:
-            clause['_id'] = collid
+            clause['_id'] = ObjectId(collid)
 
         # TODO How to implement this?
         if limit:
@@ -169,7 +170,7 @@ class Collection(object):
             return
 
         self._id = collid
-        self.document = conn.Collection.find_one({'_id': collid})
+        self.document = conn.Collection.find_one({'_id': ObjectId(collid)})
 
         # If the document do not exist create it in memory first
         if self.document is None:
@@ -204,7 +205,7 @@ class Collection(object):
         if '_id' in document and self._id != str(document['_id']):
             raise Exception('IDs differ!')
 
-        auxdoc = self.__conn.Collection.find_one_and_update({'_id': self._id},
+        auxdoc = self.__conn.Collection.find_one_and_update({'_id': ObjectId(self._id)},
                                                             document)
 
         if auxdoc is None:
