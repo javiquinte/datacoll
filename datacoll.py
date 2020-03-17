@@ -313,8 +313,6 @@ class CollectionAPI(object):
         elif collid is not None:
             collid = str(collid)
 
-        print(type(collid), collid)
-
         try:
             # FIXME This is not raising an Exception (expected) if the Collection does not exist
             coll = Collection(conn, collid)
@@ -349,7 +347,10 @@ class CollectionAPI(object):
 
         cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document, cls=DCEncoder).encode('utf-8')
+
+        result = json.dumps(coll.document, cls=DCEncoder)
+        print(type(result), result)
+        return result
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
