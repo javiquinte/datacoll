@@ -170,7 +170,12 @@ class Collection(object):
             return
 
         # _id must always be a str
-        self._id = str(collid)
+        if isinstance(collid, bytes):
+            self._id = collid.decode('utf-8')
+        else:
+            self._id = str(collid)
+
+        print(type(collid), collid, type(self._id), self._id)
         self.document = conn.Collection.find_one({'_id': ObjectId(self._id)})
 
         # If the document do not exist create it in memory first

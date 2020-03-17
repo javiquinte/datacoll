@@ -307,8 +307,16 @@ class CollectionAPI(object):
 
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
+        # _id must always be a str
+        if isinstance(collid, bytes):
+            collid = collid.decode('utf-8')
+        elif collid is not None:
+            collid = str(collid)
+
+        print(type(collid), collid)
+
         try:
-            # FIXME This is not raising an Exception (expected) if the Collection do not exist
+            # FIXME This is not raising an Exception (expected) if the Collection does not exist
             coll = Collection(conn, collid)
             raise Exception
 
@@ -326,7 +334,10 @@ class CollectionAPI(object):
         try:
             # It is important to call insert inline with an empty Collection!
             insertedid = Collection(conn, collid).insert(jsonColl)
-            coll = Collection(conn, str(insertedid).encode('utf-8'))
+            if isinstance(insertedid, bytes):
+                insertedid = insertedid.decode('utf-8')
+
+            coll = Collection(conn, insertedid)
         except Exception:
             # Send Error 400
             messDict = {'code': 0,
