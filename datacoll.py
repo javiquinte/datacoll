@@ -333,8 +333,8 @@ class CollectionAPI(object):
         try:
             # It is important to call insert inline with an empty Collection!
             insertedid = Collection(conn, collid).insert(jsonColl)
-            if isinstance(insertedid, ObjectId):
-                insertedid = str(insertedid)
+            if isinstance(insertedid, bytes):
+                insertedid = insertedid.decode('utf-8')
 
             coll = Collection(conn, insertedid)
         except Exception:
