@@ -21,6 +21,7 @@
 
 import json
 import urllib as ul
+import datetime
 
 # For the time being these are the capabilities for the datasets
 # coming from the user requests.
@@ -31,6 +32,20 @@ capabilitiesFixed = {
                      'membershipIsMutable': True,
                      'metadataIsMutable': False
                     }
+
+
+class DCEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Objects lie IDs probably
+        if isinstance(obj, bytes):
+            return obj.decode('utf-8')
+
+        # Datetime type to ISO format (str)
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+
+        # Otherwise the default behaviour
+        return json.JSONEncoder.default(self, obj)
 
 
 class urlFile(object):

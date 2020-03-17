@@ -38,6 +38,7 @@ from dcmongo import Collections
 from dcmongo import Member
 from dcmongo import Members
 from dcmongo import JSONFactory
+from dcmongo import DCEncoder
 
 version = '0.3a1'
 cfgfile = 'datacoll.cfg'
@@ -123,7 +124,7 @@ def checktokensoft(f):
         except Exception as e:
             messDict = {'code': 0,
                         'message': str(e)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -150,7 +151,7 @@ def checktokenhard(f):
         except Exception as e:
             messDict = {'code': 0,
                         'message': str(e)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -191,7 +192,7 @@ class Application(object):
             "supportedModelTypes": []
         }
         cherrypy.response.header_list = [('Content-Type', 'application/json')]
-        return json.dumps(syscapab)
+        return json.dumps(syscapab, cls=DCEncoder)
 
 
 @cherrypy.popargs('collid')
@@ -216,7 +217,7 @@ class CollectionAPI(object):
         except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -225,7 +226,7 @@ class CollectionAPI(object):
         # auxCap['restrictedtotype'] = coll.restrictedtotype
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(auxCap).encode()
+        return json.dumps(auxCap, cls=DCEncoder)
 
     @cherrypy.expose
     def index(self, collid=None, **kwargs):
@@ -244,7 +245,7 @@ class CollectionAPI(object):
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
-        message = json.dumps(messDict)
+        message = json.dumps(messDict, cls=DCEncoder)
         raise cherrypy.HTTPError(400, message)
 
     # @checktokenhard
@@ -252,7 +253,7 @@ class CollectionAPI(object):
         if collid is None:
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -261,7 +262,7 @@ class CollectionAPI(object):
         except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -274,7 +275,7 @@ class CollectionAPI(object):
         if collid is None:
             messDict = {'code': 0,
                         'message': 'No collection ID was received!'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -285,7 +286,7 @@ class CollectionAPI(object):
         except:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -300,7 +301,7 @@ class CollectionAPI(object):
         # if collid is not None:
         #     messDict = {'code': 0,
         #                 'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
-        #     message = json.dumps(messDict)
+        #     message = json.dumps(messDict, cls=DCEncoder)
         #     cherrypy.response.headers['Content-Type'] = 'application/json'
         #     raise cherrypy.HTTPError(400, message)
 
@@ -315,7 +316,7 @@ class CollectionAPI(object):
             msg = 'Collection with this PID and name already exists! (%s, %s)'
             messDict = {'code': 0,
                         'message': msg % (collid, name)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
@@ -330,14 +331,14 @@ class CollectionAPI(object):
             # Send Error 400
             messDict = {'code': 0,
                         'message': 'Collection could not be inserted'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document.encode())
+        return json.dumps(coll.document, cls=DCEncoder)
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
@@ -352,12 +353,12 @@ class CollectionAPI(object):
         except Exception:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document.encode())
+        return json.dumps(coll.document, cls=DCEncoder)
 
 
 class DownloadMemberAPI(object):
@@ -393,7 +394,7 @@ class MemberAPI(object):
 
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
-        message = json.dumps(messDict)
+        message = json.dumps(messDict, cls=DCEncoder)
         cherrypy.response.headers['Content-Type'] = 'application/json'
         raise cherrypy.HTTPError(400, message)
 
@@ -412,7 +413,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberid, collid)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -424,7 +425,7 @@ class MemberAPI(object):
         if memberid is not None:
             messDict = {'code': 0,
                         'message': 'Member ID received while trying to create it!'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -443,7 +444,7 @@ class MemberAPI(object):
             # Send Error 404
             messDict = {'code': 0,
                         'message': 'Collection %s not found!' % collid}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
@@ -454,7 +455,7 @@ class MemberAPI(object):
             msg = 'Datatype error! Collection only accepts %s'
             messDict = {'code': 0,
                         'message': msg % coll.restrictedtotype}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -467,7 +468,7 @@ class MemberAPI(object):
             msg = 'Member not properly saved. Error when querying it.'
             messDict = {'code': 0,
                         'message': msg}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
@@ -482,7 +483,7 @@ class MemberAPI(object):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             raise cherrypy.HTTPError(400, message)
 
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
@@ -503,7 +504,7 @@ class MemberAPI(object):
             msg = 'Member %s from Collection %s not found!'
             messDict = {'code': 0,
                         'message': msg % (memberid, collid)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -515,7 +516,7 @@ class MemberAPI(object):
                 msg = 'Index %s is already used for Collection %s !'
                 messDict = {'code': 0,
                             'message': msg % (index, collid)}
-                message = json.dumps(messDict)
+                message = json.dumps(messDict, cls=DCEncoder)
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 raise cherrypy.HTTPError(400, message)
             except:
@@ -528,7 +529,7 @@ class MemberAPI(object):
             msg = 'Error checking the collection properties!'
             messDict = {'code': 0,
                         'message': msg}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -538,7 +539,7 @@ class MemberAPI(object):
             msg = 'Datatype error! Collection only accepts %s'
             messDict = {'code': 0,
                         'message': msg % coll.restrictedtotype}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -553,7 +554,7 @@ class MemberAPI(object):
             msg = 'Member seems not to be properly saved.'
             messDict = {'code': 0,
                         'message': msg}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -565,7 +566,7 @@ class MemberAPI(object):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
             raise cherrypy.HTTPError(400, message)
 
         try:
@@ -574,7 +575,7 @@ class MemberAPI(object):
             msg = 'Member ID %s within collection ID %s not found'
             messDict = {'code': 0,
                         'message': msg % (memberid, collid)}
-            message = json.dumps(messDict)
+            message = json.dumps(messDict, cls=DCEncoder)
 
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
