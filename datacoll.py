@@ -221,7 +221,8 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         auxCap = capabilitiesFixed.copy()
-        auxCap['restrictedtotype'] = coll.restrictedtotype
+        # TODO See if capabilities should stay out side from Collection
+        # auxCap['restrictedtotype'] = coll.restrictedtotype
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(auxCap).encode()
@@ -288,76 +289,27 @@ class CollectionAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        # Read only the fields that we support
-        try:
-            owner = jsonColl['properties']['ownership'].strip()
-        except:
-            owner = None
-
-        try:
-            pid = jsonColl['pid'].strip()
-        except:
-            pid = None
-
-        try:
-            name = jsonColl['name'].strip()
-        except:
-            name = None
-
-        try:
-            jc = jsonColl['capabilities']
-            restrictedtotype = jc['restrictedToType'].strip()
-        except:
-            restrictedtotype = None
-
-        try:
-            rule = jsonColl['rule'].strip()
-        except:
-            rule = None
-
         # FIXME I must check if the object coll is being updated as in the DB!
-        coll.update(name=name, owner=owner, pid=pid,
-                    restrictedtotype=restrictedtotype, rule=rule)
+        coll.update(jsonColl)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON().encode()
+        return coll.document
 
     # @checktokenhard
     def post(self, collid, **kwargs):
-        if collid is not None:
-            messDict = {'code': 0,
-                        'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
-            message = json.dumps(messDict)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
+        # if collid is not None:
+        #     messDict = {'code': 0,
+        #                 'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
+        #     message = json.dumps(messDict)
+        #     cherrypy.response.headers['Content-Type'] = 'application/json'
+        #     raise cherrypy.HTTPError(400, message)
 
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
-        # Read only the fields that we support
         try:
-            owner = jsonColl['properties']['ownership'].strip()
-        except:
-            owner = None
-        try:
-            pid = jsonColl['pid'].strip()
-        except:
-            pid = None
-        try:
-            name = jsonColl['name'].strip()
-        except:
-            name = None
-        try:
-            jc = jsonColl['capabilities']
-            restrictedtotype = jc['restrictedToType'].strip()
-        except:
-            restrictedtotype = None
-        try:
-            rule = jsonColl['rule'].strip()
-        except:
-            rule = None
-
-        try:
-            coll = Collection(conn, pid=pid, name=name)
+            # FIXME This is not raising an Exception (expected) if the Collection do not exist
+            coll = Collection(conn, collid)
+            raise Exception
 
             # Send Error 400
             msg = 'Collection with this PID and name already exists! (%s, %s)'
@@ -367,16 +319,13 @@ class CollectionAPI(object):
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
-        except:
+        except Exception:
             pass
 
         try:
             # It is important to call insert inline with an empty Collection!
-            coll = Collection(None).insert(conn, owner=owner, pid=pid,
-                                           name=name,
-                                           restrictedtotype=restrictedtotype,
-                                           rule=rule)
-        except:
+            coll = Collection(conn, collid).insert(jsonColl)
+        except Exception:
             # Send Error 400
             messDict = {'code': 0,
                         'message': 'Collection could not be inserted'}
@@ -390,7 +339,7 @@ class CollectionAPI(object):
         return coll.toJSON().encode()
 
     # @checktokensoft
-    def get(self, collid, **kwargs):
+    def get(self, collid=None, **kwargs):
         if collid is None:
             # If no ID is given iterate through all collections in cursor
             coll = Collections(conn)
@@ -399,7 +348,7 @@ class CollectionAPI(object):
 
         try:
             coll = Collection(conn, collid=collid)
-        except:
+        except Exception:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict)
@@ -407,7 +356,7 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON().encode()
+        return coll.document
 
 
 class DownloadMemberAPI(object):
