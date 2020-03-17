@@ -246,7 +246,7 @@ class CollectionAPI(object):
         message = json.dumps(messDict)
         raise cherrypy.HTTPError(400, message)
 
-    @checktokenhard
+    # @checktokenhard
     def delete(self, collid, **kwargs):
         if collid is None:
             messDict = {'code': 0,
@@ -268,7 +268,7 @@ class CollectionAPI(object):
 
         return ""
 
-    @checktokenhard
+    # @checktokenhard
     def put(self, collid, **kwargs):
         if collid is None:
             messDict = {'code': 0,
@@ -322,7 +322,7 @@ class CollectionAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON().encode()
 
-    @checktokenhard
+    # @checktokenhard
     def post(self, collid, **kwargs):
         if collid is not None:
             messDict = {'code': 0,
@@ -389,7 +389,7 @@ class CollectionAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON().encode()
 
-    @checktokensoft
+    # @checktokensoft
     def get(self, collid, **kwargs):
         if collid is None:
             # If no ID is given iterate through all collections in cursor
@@ -447,7 +447,7 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         raise cherrypy.HTTPError(400, message)
 
-    @checktokensoft
+    # @checktokensoft
     def get(self, collid, memberid, **kwargs):
         if memberid is None:
             membList = Members(conn, collid=collid)
@@ -469,7 +469,7 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return member.toJSON().encode()
 
-    @checktokenhard
+    # @checktokenhard
     def post(self, collid, memberid, **kwargs):
         if memberid is not None:
             messDict = {'code': 0,
@@ -527,7 +527,7 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return member.toJSON().encode()
 
-    @checktokenhard
+    # @checktokenhard
     def put(self, collid, memberid, **kwargs):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
@@ -610,7 +610,7 @@ class MemberAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return memb.toJSON().encode()
 
-    @checktokenhard
+    # @checktokenhard
     def delete(self, collid, memberid, **kwargs):
         if((collid is None) or (memberid is None)):
             messDict = {'code': 0,
