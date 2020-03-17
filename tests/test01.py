@@ -20,16 +20,13 @@ any later version.
 import sys
 import os
 import unittest
-import urllib
 import json
 from urllib.request import Request
 from urllib.request import urlopen
-from urllib.request import HTTPError
 
 here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
 from unittestTools import WITestRunner
-from dcmongo import DCEncoder
 
 
 global token
@@ -40,7 +37,7 @@ with open(os.path.join(os.path.expanduser('~'), '.eidatoken')) as fin:
 
 def createcollection(baseurl, datafile):
     with open(datafile) as fin:
-        data = fin.read().encode()
+        data = fin.read().encode('utf-8')
         req = Request('%s/collections' % baseurl, data=data)
         req.add_header("Content-Type", 'application/json')
         req.add_header("Authorization", "Bearer %s" % token)
@@ -126,7 +123,7 @@ def getcollection(baseurl, collid=None):
     # Query the collection to check it has been properly created
     if collid is not None:
         req = Request('%s/collections/%s' %
-                      (baseurl, collid))
+                      (baseurl, str(collid)))
     else:
         req = Request('%s/collections' %
                       (baseurl))
