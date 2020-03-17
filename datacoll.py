@@ -350,7 +350,6 @@ class CollectionAPI(object):
         cherrypy.response.headers['Content-Type'] = 'application/json'
 
         result = json.dumps(coll.document, cls=DCEncoder)
-        print(type(result), result)
         return result.encode('utf-8')
 
     # @checktokensoft
@@ -372,7 +371,6 @@ class CollectionAPI(object):
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         result = json.dumps(coll.document, cls=DCEncoder)
-        print(type(result), result)
         return result.encode('utf-8')
 
 
