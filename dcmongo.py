@@ -169,12 +169,13 @@ class Collection(object):
             self._id = None
             return
 
-        self._id = collid
-        self.document = conn.Collection.find_one({'_id': ObjectId(collid)})
+        # _id must always be a str
+        self._id = str(collid)
+        self.document = conn.Collection.find_one({'_id': ObjectId(self._id)})
 
         # If the document do not exist create it in memory first
         if self.document is None:
-            self.document = {'_id': collid}
+            self.document = {'_id': self._id}
 
     def insert(self, document=None):
         """Insert a new collection in the MySQL DB.
