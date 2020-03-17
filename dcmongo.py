@@ -175,7 +175,7 @@ class Collection(object):
         # TODO What happens if _id is different?
         inserted = self.__conn.Collection.insert_one(self.document)
         self._id = str(inserted.inserted_id)
-        return self._id
+        return self._id.encode('utf-8')
 
     def update(self, document=None):
         """Update the fields passed as parameters in the MySQL DB.
