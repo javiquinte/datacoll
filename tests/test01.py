@@ -50,7 +50,7 @@ def createcollection(baseurl, datafile):
         # Check that I received a 201 code
 
         if u.getcode() == 201:
-            return coll['collid']
+            return str(coll['_id'])
 
     raise Exception('Collection not created.')
 
