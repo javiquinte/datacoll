@@ -173,7 +173,7 @@ class Collection(object):
             self.document = document
 
         # TODO What happens if _id is different?
-        inserted = self.__conn.insert_one(self.document)
+        inserted = self.__conn.Collection.insert_one(self.document)
         self._id = inserted.inserted_id
         return inserted.inserted_id
 
