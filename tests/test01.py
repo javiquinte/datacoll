@@ -29,6 +29,7 @@ from urllib.request import HTTPError
 here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
 from unittestTools import WITestRunner
+from dcmongo import DCEncoder
 
 
 global token
@@ -73,7 +74,7 @@ def createmember(baseurl, collid, datafile):
 
 def deletemember(baseurl, collid, memberid):
     # Delete a member of a collection
-    req = Request('%s/collections/%d/members/%d' %
+    req = Request('%s/collections/%s/members/%s' %
                   (baseurl, collid, memberid))
     req.get_method = lambda: 'DELETE'
     req.add_header("Authorization", "Bearer %s" % token)
@@ -88,7 +89,7 @@ def deletemember(baseurl, collid, memberid):
 
 def deletecollection(baseurl, collid):
     # Delete a collection
-    req = Request('%s/collections/%d' %
+    req = Request('%s/collections/%s' %
                   (baseurl, collid))
     req.get_method = lambda: 'DELETE'
     req.add_header("Authorization", "Bearer %s" % token)
@@ -104,10 +105,10 @@ def deletecollection(baseurl, collid):
 def getmember(baseurl, collid, memberid=None):
     # Query the member to check it has been properly created
     if memberid is not None:
-        req = Request('%s/collections/%d/members/%d' %
+        req = Request('%s/collections/%s/members/%s' %
                       (baseurl, collid, memberid))
     else:
-        req = Request('%s/collections/%d/members' %
+        req = Request('%s/collections/%s/members' %
                       (baseurl, collid))
 
     req.add_header("Authorization", "Bearer %s" % token)
@@ -124,7 +125,7 @@ def getmember(baseurl, collid, memberid=None):
 def getcollection(baseurl, collid=None):
     # Query the collection to check it has been properly created
     if collid is not None:
-        req = Request('%s/collections/%d' %
+        req = Request('%s/collections/%s' %
                       (baseurl, collid))
     else:
         req = Request('%s/collections' %
@@ -143,7 +144,7 @@ def getcollection(baseurl, collid=None):
 
 def getcollcapabilities(baseurl, collid):
     # Query the collection capabilities
-    req = Request('%s/collections/%d/capabilities' %
+    req = Request('%s/collections/%s/capabilities' %
                   (baseurl, collid))
 
     req.add_header("Authorization", "Bearer %s" % token)
@@ -254,7 +255,7 @@ class DataCollTests(unittest.TestCase):
         coll2 = getcollection(self.host, collid)
 
         # Check that the ids are the same
-        self.assertEqual(collid, coll2['collid'], 'IDs differ!')
+        self.assertEqual(collid, str(coll2['_id']), 'IDs differ!')
         # Compare owner with the original one
         self.assertEqual(coll['properties']['ownership'],
                          coll2['properties']['ownership'],
