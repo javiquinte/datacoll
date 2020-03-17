@@ -332,8 +332,8 @@ class CollectionAPI(object):
         try:
             # It is important to call insert inline with an empty Collection!
             insertedid = Collection(conn, collid).insert(jsonColl)
-            if isinstance(insertedid, bytes):
-                insertedid = insertedid.decode('utf-8')
+            if isinstance(insertedid, ObjectId):
+                insertedid = str(insertedid)
 
             coll = Collection(conn, insertedid)
         except Exception:
@@ -345,7 +345,7 @@ class CollectionAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
-        cherrypy.response.status = '201 Collection %s created' % str(collid)
+        cherrypy.response.status = '201 Collection %s created' % insertedid
         cherrypy.response.headers['Content-Type'] = 'application/json'
 
         result = json.dumps(coll.document, cls=DCEncoder)
