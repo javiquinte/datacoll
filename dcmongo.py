@@ -22,7 +22,7 @@
 import json
 import urllib as ul
 import datetime
-from pymongo import ObjectId
+from bson.objectid import ObjectId
 
 # For the time being these are the capabilities for the datasets
 # coming from the user requests.

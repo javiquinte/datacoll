@@ -4,7 +4,7 @@ MAINTAINER Javier Quinteros
 
 WORKDIR /opt/datacoll
 
-RUN apt update && apt install -y python3-cherrypy3 python3-gnupg python3-pymongo git && mkdir -p /opt
+RUN apt update && apt install -y python3-cherrypy3 python3-gnupg python3-pymongo python3-bson git && mkdir -p /opt
 RUN cd /opt && git clone https://github.com/javiquinte/datacoll.git && cd datacoll && git checkout mongo
 
 # Define default command.
