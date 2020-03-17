@@ -227,7 +227,7 @@ class CollectionAPI(object):
         # auxCap['restrictedtotype'] = coll.restrictedtotype
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(auxCap, cls=DCEncoder)
+        return json.dumps(auxCap, cls=DCEncoder).encode('utf-8')
 
     @cherrypy.expose
     def index(self, collid=None, **kwargs):
@@ -267,7 +267,7 @@ class CollectionAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        coll.delete(conn)
+        coll.delete()
 
         return ""
 
