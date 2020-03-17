@@ -336,7 +336,7 @@ class CollectionAPI(object):
 
         cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return coll.toJSON().encode()
+        return coll.document
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
