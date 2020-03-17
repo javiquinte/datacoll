@@ -142,7 +142,7 @@ class Collection(object):
         :param conn: Connection to the MySQL DB.
         :type conn: MySQLdb.connections.Connection
         :param collid: Collection ID.
-        :type collid: int
+        :type collid: str
         :returns: A collection from the DB based on the given parameters.
         :rtype: :class:`~CollectionBase`
         """
@@ -174,8 +174,8 @@ class Collection(object):
 
         # TODO What happens if _id is different?
         inserted = self.__conn.Collection.insert_one(self.document)
-        self._id = inserted.inserted_id
-        return inserted.inserted_id
+        self._id = str(inserted.inserted_id)
+        return self._id
 
     def update(self, document=None):
         """Update the fields passed as parameters in the MySQL DB.
@@ -195,7 +195,7 @@ class Collection(object):
         if auxdoc is None:
             document['_id'] = self._id
             inserted = self.__conn.Collection.insert_one(document)
-            self._id = inserted.inserted_id
+            self._id = str(inserted.inserted_id)
 
         return self._id
 
