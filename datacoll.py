@@ -337,7 +337,7 @@ class CollectionAPI(object):
 
         cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document).encode()
+        return json.dumps(coll.document.encode())
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
@@ -357,7 +357,7 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document).encode()
+        return json.dumps(coll.document.encode())
 
 
 class DownloadMemberAPI(object):
