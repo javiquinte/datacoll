@@ -314,7 +314,7 @@ class CollectionAPI(object):
             # Send Error 400
             msg = 'Collection with this PID and name already exists! (%s, %s)'
             messDict = {'code': 0,
-                        'message': msg % (pid, name)}
+                        'message': msg % (collid, name)}
             message = json.dumps(messDict)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -334,7 +334,7 @@ class CollectionAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
-        cherrypy.response.status = '201 Collection %s created' % str(pid)
+        cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.toJSON().encode()
 
