@@ -146,6 +146,7 @@ class Collection(object):
         :returns: A collection from the DB based on the given parameters.
         :rtype: :class:`~CollectionBase`
         """
+        self.__conn = conn
         # If no filters are given then return an empty object
         if collid is None:
             self.document = dict()
@@ -159,11 +160,9 @@ class Collection(object):
         if self.document is None:
             self.document = {'_id': collid}
 
-    def insert(self, conn, document=None):
+    def insert(self, document=None):
         """Insert a new collection in the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
         :param document: Collection.
         :type document: dict
         :returns: A new collection.
@@ -174,15 +173,13 @@ class Collection(object):
             self.document = document
 
         # TODO What happens if _id is different?
-        inserted = conn.insert_one(self.document)
+        inserted = self.__conn.insert_one(self.document)
         self._id = inserted.inserted_id
         return inserted.inserted_id
 
-    def update(self, conn, document=None):
+    def update(self, document=None):
         """Update the fields passed as parameters in the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
         :param document: Collection.
         :type document: dict
         :returns: The updated collection.
@@ -192,23 +189,21 @@ class Collection(object):
         if '_id' in document and self._id != document['_id']:
             raise Exception('IDs differ!')
 
-        auxdoc = conn.Collection.find_one_and_update({'_id': self._id},
-                                                     document)
+        auxdoc = self.__conn.Collection.find_one_and_update({'_id': self._id},
+                                                            document)
 
         if auxdoc is None:
             document['_id'] = self._id
-            inserted = conn.Collection.insert_one(document)
+            inserted = self.__conn.Collection.insert_one(document)
             self._id = inserted.inserted_id
 
         return self._id
 
-    def delete(self, conn):
+    def delete(self):
         """Delete a Collection from the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
         """
-        deleted = conn.Collection.delete_one({'_id': self._id})
+        deleted = self.__conn.Collection.delete_one({'_id': self._id})
 
         # Check this. The value must be 1
         if deleted.deleted_count != 1:
