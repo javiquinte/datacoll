@@ -205,7 +205,7 @@ class CollectionAPI(object):
         """Return the capabilities of a collection.
 
         :param collid: Collection ID.
-        :type collid: int
+        :type collid: str
         :returns: The capabilities of the collection in JSON format.
         :rtype: string
         :raises: cherrypy.HTTPError
@@ -338,7 +338,7 @@ class CollectionAPI(object):
 
         cherrypy.response.status = '201 Collection %s created' % str(collid)
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document, cls=DCEncoder)
+        return json.dumps(coll.document, cls=DCEncoder).encode('utf-8')
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
@@ -358,7 +358,7 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document, cls=DCEncoder)
+        return json.dumps(coll.document, cls=DCEncoder).encode('utf-8')
 
 
 class DownloadMemberAPI(object):
