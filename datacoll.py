@@ -33,6 +33,7 @@ import gnupg
 import datetime
 import urllib
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 from dcmongo import Collection
 from dcmongo import Collections
 from dcmongo import Member
