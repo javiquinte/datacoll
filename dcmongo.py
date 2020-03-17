@@ -228,7 +228,7 @@ class Collection(object):
         """Delete a Collection from the MySQL DB.
 
         """
-        deleted = self.__conn.Collection.delete_one({'_id': self._id})
+        deleted = self.__conn.Collection.delete_one({'_id': ObjectId(self._id)})
 
         # Check this. The value must be 1
         if deleted.deleted_count != 1:
