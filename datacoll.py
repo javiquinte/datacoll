@@ -350,7 +350,7 @@ class CollectionAPI(object):
 
         result = json.dumps(coll.document, cls=DCEncoder)
         print(type(result), result)
-        return result
+        return result.encode('utf-8')
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
@@ -370,7 +370,9 @@ class CollectionAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(coll.document, cls=DCEncoder).encode('utf-8')
+        result = json.dumps(coll.document, cls=DCEncoder)
+        print(type(result), result)
+        return result.encode('utf-8')
 
 
 class DownloadMemberAPI(object):
