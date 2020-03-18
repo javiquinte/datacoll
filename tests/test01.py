@@ -193,53 +193,12 @@ class DataCollTests(unittest.TestCase):
         memb2 = getmember(self.host, collid, memberid)
 
         # Check that the ids are the same
-        self.assertEqual(memberid, memb2['memberid'], 'IDs differ!')
-        # Compare owner with the original one
-        msg = 'Location recorded differ with the original one!'
-        self.assertEqual(memb['location'], memb2['location'], msg)
+        self.assertEqual(memberid, str(memb2['_id']), 'IDs differ!')
 
-        collruleid = createcollection(self.host, 'new-coll-rule.json')
-        membersrule = getmember(self.host, collruleid)
-
-        # FIXME What else should I check?
-        # Probably that there is only one member!
-
-        deletemember(self.host, collid, memberid)
-        deletecollection(self.host, collid)
-        deletecollection(self.host, collruleid)
-        return
-
-    def test_memb_create_query_delete(self):
-        """Creation, query and deletion of a Member of a Collection."""
-        collid = createcollection(self.host, 'new-coll.json')
-        with open('new-memb.json') as fin:
-            memb = json.load(fin)
-        memberid = createmember(self.host, collid, 'new-memb.json')
-        memb2 = getmember(self.host, collid, memberid)
-
-        # Check that the ids are the same
-        self.assertEqual(memberid, memb2['memberid'], 'IDs differ!')
-        # Compare owner with the original one
-        msg = 'Location recorded differ with the original one!'
-        self.assertEqual(memb['location'], memb2['location'], msg)
-
+        # Get all members from the collection (only 1)
         members = getmember(self.host, collid)
 
-        # FIXME What else should I check?
-        # Probably that there is only one member!
-
-        # FIXME Check the syntax of "properties"
-        # Query the collection capabilities
-        # req = urllib2.Request('%s/collections/%d/capabilities' %
-        # (self.host, coll['id']))
-        # try:
-        #     u = urllib2.urlopen(req)
-        #     capab = json.loads(u.read())
-        #     # Check that capabilities have at least the maxLength field
-        #     self.assertEqual(capab['maxLength'], -1,
-        # 'maxLength is supposed to be -1 for this test!')
-        # except Exception as e:
-        #     self.assertTrue(False, 'Error: %s' % e)
+        # TODO Check probably that there is only one member!
 
         deletemember(self.host, collid, memberid)
         deletecollection(self.host, collid)
