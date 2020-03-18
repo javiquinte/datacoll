@@ -183,7 +183,7 @@ class Collection(object):
 
         # If the document do not exist create it in memory first
         if self.document is None:
-            self.document = {'_id': self._id}
+            raise Exception('Collection %s does not exist!' % self._id)
 
     def insert(self, document=None):
         """Insert a new collection in the MySQL DB.
