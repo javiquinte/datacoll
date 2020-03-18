@@ -299,13 +299,6 @@ class CollectionAPI(object):
 
     # @checktokenhard
     def post(self, collid, **kwargs):
-        # if collid is not None:
-        #     messDict = {'code': 0,
-        #                 'message': 'A collection ID (%s) was received while trying to create a Collection' % collid}
-        #     message = json.dumps(messDict, cls=DCEncoder)
-        #     cherrypy.response.headers['Content-Type'] = 'application/json'
-        #     raise cherrypy.HTTPError(400, message)
-
         jsonColl = json.loads(cherrypy.request.body.fp.read())
 
         # _id must always be a str
@@ -317,7 +310,7 @@ class CollectionAPI(object):
         try:
             # FIXME This is not raising an Exception (expected) if the Collection does not exist
             coll = Collection(conn, collid)
-            raise Exception
+            # raise Exception
 
             # Send Error 400
             msg = 'Collection with this PID and name already exists! (%s, %s)'
@@ -393,6 +386,7 @@ class MemberAPI(object):
 
     @cherrypy.expose
     def index(self, collid, memberid=None, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         if cherrypy.request.method == 'GET':
             return self.get(collid, memberid, **kwargs)
 
@@ -408,7 +402,6 @@ class MemberAPI(object):
         messDict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
         message = json.dumps(messDict, cls=DCEncoder)
-        cherrypy.response.headers['Content-Type'] = 'application/json'
         raise cherrypy.HTTPError(400, message)
 
     # @checktokensoft
@@ -422,7 +415,7 @@ class MemberAPI(object):
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
-        except:
+        except Exception:
             messDict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberid, collid)}
@@ -431,18 +424,30 @@ class MemberAPI(object):
             raise cherrypy.HTTPError(404, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return member.toJSON().encode()
+        result = json.dumps(member.document, cls=DCEncoder)
+        return result.encode('utf-8')
 
     # @checktokenhard
     def post(self, collid, memberid, **kwargs):
+        jsonMemb = json.loads(cherrypy.request.body.fp.read())
+
+        # _id must always be a str
+        if isinstance(collid, bytes):
+            collid = collid.decode('utf-8')
+        elif collid is not None:
+            collid = str(collid)
+        # _id must always be a str
+        if isinstance(memberid, bytes):
+            memberid = memberid.decode('utf-8')
+        elif memberid is not None:
+            memberid = str(memberid)
+
         if memberid is not None:
             messDict = {'code': 0,
                         'message': 'Member ID received while trying to create it!'}
             message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
-
-        jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
         # Read only the fields that we support
         pid = jsonMemb.get('pid', None)
