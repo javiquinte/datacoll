@@ -23,6 +23,7 @@ import unittest
 import json
 from urllib.request import Request
 from urllib.request import urlopen
+from urllib.error import HTTPError
 
 here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
@@ -266,6 +267,14 @@ class DataCollTests(unittest.TestCase):
                          'maxLength supposed to be -1 for this test!')
 
         deletecollection(self.host, collid)
+        return
+
+    def test_coll_missing(self):
+        """Try to retrieve a non-existing Collection."""
+
+        msg = 'Retrieving a non-existing collection should raise a HTTPError'
+        with self.assertRaises(HTTPError):
+            getcollection(self.host, 'non-existing-collection')
         return
 
 
