@@ -165,6 +165,7 @@ class Collection(object):
         :type collid: str
         :returns: A collection from the DB based on the given parameters.
         :rtype: :class:`~CollectionBase`
+        :raises: Exception
         """
         self.__conn = conn
         # If no filters are given then return an empty object
@@ -209,7 +210,7 @@ class Collection(object):
         :type document: dict
         :returns: The updated collection.
         :rtype: :class:`~InsertOneResult`
-        :raise: Exception
+        :raises: Exception
         """
         if '_id' in document and self._id != str(document['_id']):
             raise Exception('IDs differ!')
@@ -240,73 +241,48 @@ class Collection(object):
 class Member(object):
     """Abstraction from the DB storage for the Member."""
 
-    __slots__ = ()
-
-    def __new__(cls, conn, collid=None, memberid=None, pid=None, location=None):
+    def __init__(self, conn, collid=None, memberid=None):
         """Constructor of the Member.
 
         :param conn: Connection to the MySQL DB.
         :type conn: MySQLdb.connections.Connection
         :param collid: Collection ID.
-        :type collid: int
+        :type collid: str
         :param memberid: Member ID.
-        :type memberid: int
-        :param pid: PID of the collection.
-        :type pid: string
-        :param location: URL where collection can be found.
-        :type location: string
+        :type memberid: str
         :returns: A member from the DB based on the given parameters.
         :rtype: :class:`~MemberBase`
         :raises: Exception
         """
+        self.__conn = conn
+        if collid is None:
+            raise Exception('Empty collection ID!')
+
         # If no filters are given then return an empty object
-        if ((collid is None) and (memberid is None)):
-            self = super(Member, cls).__new__(cls, None, None, None, None,
-                                              None, None, None)
-            return self
+        if memberid is None:
+            self.document = dict()
+            self._id = None
+            return
 
-        cursor = conn.cursor()
-
-        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
-        query = query + 'm.dateadded from member as m left join datatype as d '
-        query = query + 'on m.datatype = d.id '
-
-        whereClause = list()
-        sqlParams = list()
-
-        if collid is not None:
-            whereClause.append('m.cid = %s')
-            sqlParams.append(collid)
-
-        if memberid is not None:
-            whereClause.append('m.id = %s')
-            sqlParams.append(memberid)
+        # _id must always be a str
+        if isinstance(collid, bytes):
+            self._id = collid.decode('utf-8')
         else:
-            if pid is not None:
-                whereClause.append('m.pid = %s')
-                sqlParams.append(pid)
+            self._id = str(collid)
 
-            if location is not None:
-                whereClause.append('m.location = %s')
-                sqlParams.append(location)
+        # _id must always be a str
+        if isinstance(memberid, bytes):
+            self._id = memberid.decode('utf-8')
+        else:
+            self._id = str(memberid)
 
-        if len(sqlParams):
-            query = query + ' where ' + ' and '.join(whereClause)
+        self.document = conn.Member.find_one({'_id': ObjectId(self._id)})
 
-        cursor.execute(query, tuple(sqlParams))
+        # If the document do not exist create it in memory first
+        if self.document is None:
+            raise Exception('Member %s does not exist!' % self._id)
 
-        # Read one member because an ID is given. Check that there is
-        # something to return (result set not empty)
-        member = cursor.fetchone()
-        cursor.close()
-
-        if member is None:
-            raise Exception('Member not found!')
-
-        self = super(Member, cls).__new__(cls, *member)
-        return self
-
-    def download(self, conn):
+    def download(self):
         """Download a Member from the MySQL DB.
 
         :param conn: Connection to the MySQL DB.
@@ -344,179 +320,56 @@ class Member(object):
         cursor.close()
         return url
 
-    def delete(self, conn):
+    def delete(self):
         """Delete a Member from the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
         """
-        cursor = conn.cursor()
-        query = 'delete from member where cid = %s and id = %s'
-        cursor.execute(query, (self.collid, self.memberid, ))
-        cursor.close()
-        conn.commit()
+        deleted = self.__conn.Member.delete_one({'_id': ObjectId(self._id)})
 
-    def insert(self, conn, collid, pid=None, location=None, checksum=None,
-               datatype=None, index=None):
+        # Check this. The value must be 1
+        if deleted.deleted_count != 1:
+            raise Exception('Member not found!')
+        self._id = None
+        self.document = None
+
+    def insert(self, document=None):
         """Insert a new Member in the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
-        :param collid: Collection ID.
-        :type collid: int
-        :param pid: PID of the collection.
-        :type pid: string
-        :param location: URL where collection can be found.
-        :type location: string
-        :param checksum: Checksum of the data file.
-        :type checksum: string
-        :param datatype: Data type of the resource specified by the Member.
-        :type datatype: string
-        :param index: Member position (index) within the collection.
-        :type index: int
+        :param document: Member.
+        :type document: dict
         :returns: A member from the DB based on the given parameters.
-        :rtype: :class:`~MemberBase`
+        :rtype: :class:`~InsertOneResult`
         :raises: Exception
         """
-        cursor = conn.cursor()
+        if document is not None:
+            self.document = document
 
-        # Either pid or location should have a valid value
-        if ((pid is None) and (location is None)):
-            msg = 'Either PID or location should have a valid non empty value.'
-            raise Exception(msg)
+        # TODO What happens if _id is different?
+        inserted = self.__conn.Member.insert_one(self.document)
+        self._id = str(inserted.inserted_id)
+        return self._id.encode('utf-8')
 
-        if datatype is None:
-            datatypeID = None
-        else:
-            query = 'select id from datatype where name = %s'
-            cursor.execute(query, (datatype,))
-            datatypeID = cursor.fetchone()
-
-            if datatypeID is None:
-                query = 'insert into datatype (name) values (%s)'
-                cursor.execute(query, (datatype,))
-                conn.commit()
-                # Retrieve the ID which was recently created
-                query = 'select id from datatype where name = %s'
-                cursor.execute(query, (datatype,))
-
-                datatypeID = cursor.fetchone()
-
-        query = 'insert into member (cid, pid, location, checksum,datatype,id)'
-        if index is None:
-            query = query + ' select %s, %s, %s, %s, %s, coalesce(max(id),0)+1'
-            query = query + ' from member where cid = %s'
-            sqlParams = [collid, pid, location, checksum, datatypeID, collid]
-        else:
-            query = query + ' values (%s, %s, %s, %s, %s, %s)'
-            sqlParams = [collid, pid, location, checksum, datatypeID, index]
-
-        try:
-            cursor.execute(query, tuple(sqlParams))
-            conn.commit()
-        except:
-            conn.commit()
-            cursor.close()
-            msg = 'Creation of member raised an error! Was it already present?'
-            raise Exception(msg)
-
-        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
-        query = query + 'm.dateadded from member as m left join datatype as d '
-        query = query + 'on m.datatype = d.id'
-
-        whereClause = ['m.cid=%s']
-        sqlParams = [collid]
-
-        if pid is not None:
-            whereClause.append('m.pid = %s')
-            sqlParams.append(pid)
-
-        if location is not None:
-            whereClause.append('m.location = %s')
-            sqlParams.append(location)
-
-        if len(sqlParams):
-            query = query + ' where ' + ' and '.join(whereClause)
-
-        cursor.execute(query, tuple(sqlParams))
-
-        # Read one member because an ID is given. Check that there is
-        # something to return (result set not empty)
-        member = cursor.fetchone()
-
-        cursor.close()
-        self = super(Member, self).__new__(type(self), *member)
-        return self
-
-    def update(self, conn, memberid=None, pid=None, location=None, checksum=None,
-               datatype=None):
+    def update(self, document=None):
         """Update the fields passed as parameters in the MySQL DB.
 
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
-        :param id: ID of the collection.
-        :type id: int
-        :param pid: PID of the collection.
-        :type pid: string
-        :param location: URL where collection can be found.
-        :type location: string
-        :param checksum: Checksum of the data file.
-        :type checksum: string
-        :param datatype: Data type of the resource specified by the Member.
-        :type datatype: string
-        :returns: A member from the DB based on the given parameters.
-        :rtype: :class:`~MemberBase`
+        :param document: Member.
+        :type document: dict
+        :returns: The updated Member.
+        :rtype: :class:`~InsertOneResult`
         :raises: Exception
         """
-        setClause = list()
-        sqlParams = list()
+        if '_id' in document and self._id != str(document['_id']):
+            raise Exception('IDs differ!')
 
-        if memberid is not None:
-            setClause.append('id = %s')
-            sqlParams.append(memberid)
+        auxdoc = self.__conn.Member.find_one_and_update({'_id': ObjectId(self._id)},
+                                                        document)
 
-        if pid is not None:
-            setClause.append('pid = %s')
-            sqlParams.append(pid)
+        if auxdoc is None:
+            document['_id'] = self._id
+            inserted = self.__conn.Member.insert_one(document)
+            self._id = str(inserted.inserted_id)
 
-        if location is not None:
-            setClause.append('location = %s')
-            sqlParams.append(location)
-
-        if checksum is not None:
-            setClause.append('checksum = %s')
-            sqlParams.append(checksum)
-
-        if datatype is not None:
-            setClause.append('datatype = %s')
-            sqlParams.append(datatype)
-
-        # If there is nothing to change
-        if not len(sqlParams):
-            return self
-
-        cursor = conn.cursor()
-        query = 'update member set ' + ', '.join(setClause)
-        query = query + ' where cid = %s and id = %s'
-        sqlParams.extend([self.collid, self.memberid])
-
-        cursor.execute(query, tuple(sqlParams))
-        conn.commit()
-
-        # Retrieve the updated record from the DB
-        query = 'select m.cid, m.id, m.pid, m.location, m.checksum, d.name, '
-        query = query + 'm.dateadded from member as m inner join collection '
-        query = query + 'as c on m.cid = c.id left join datatype as d '
-        query = query + 'on m.datatype = d.id where m.cid = %s and m.id = %s'
-
-        cursor.execute(query, (self.collid, self.memberid if memberid is None else memberid))
-        memb = cursor.fetchone()
-        cursor.close()
-        if memb is None:
-            raise Exception('Member not updated')
-
-        self = super(Member, self).__new__(type(self), *memb)
-        return self
+        return self._id
 
 
 class JSONFactory(object):
