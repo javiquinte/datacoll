@@ -125,14 +125,18 @@ class Members(object):
         :param conn: Connection to the MySQL DB.
         :type conn: MySQLdb.connections.Connection
         :param collid: Collection ID.
-        :type collid: int
+        :type collid: str
         :param limit: Limit the number of records from the result.
         :type limit: int
+        :raise: Exception
         """
         clause = dict()
         # Filter by owner if present in the parameters
         if collid is not None:
             clause['_collectionId'] = ObjectId(collid)
+
+        if not conn.Collection.count({'_id': ObjectId(collid)}):
+            raise Exception('Collection %s not found' % collid)
 
         # TODO How to implement this?
         if limit:
