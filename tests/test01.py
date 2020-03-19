@@ -65,7 +65,7 @@ def createmember(baseurl, collid, datafile):
         # Check that I received a 201 code
 
         if u.getcode() == 201:
-            return memb['memberid']
+            return str(memb['_id'])
 
     raise Exception('Member not created.')
 
