@@ -33,7 +33,8 @@ import gnupg
 import datetime
 import urllib
 from pymongo import MongoClient
-from bson.objectid import ObjectId
+# from bson.objectid import ObjectId
+from bson.json_util import dumps
 from dcmongo import Collection
 from dcmongo import Collections
 from dcmongo import Member
@@ -417,7 +418,7 @@ class MemberAPI(object):
                 raise cherrypy.HTTPError(404, message)
 
             # If no ID is given iterate through all collections in cursor
-            return JSONFactory(membList)
+            return dumps(membList).encode('utf-8')
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
