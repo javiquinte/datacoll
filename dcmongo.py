@@ -383,10 +383,11 @@ class JSONFactory(object):
     :type objType: type
     """
 
-    def __init__(self, cursor, objType):
+    def __init__(self, objlist):
         """Constructor of the JSONFactory."""
-        self.cursor = cursor
-        self.objType = objType
+        self.cursor = objlist
+        self.index = 0
+        # self.objType = objType
         # 0: Header must be sent; 1: Send 1st collection; 2: Send more items
         # 3: Headers have been closed and StopIteration should be raised
         self.status = 0
@@ -418,7 +419,8 @@ class JSONFactory(object):
             raise StopIteration
 
         # Load a record
-        reg = self.cursor.next()
+        reg = self.cursor[self.index]
+        self.index += 1
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
             self.status = 3

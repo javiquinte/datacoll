@@ -350,7 +350,7 @@ class CollectionAPI(object):
             # If no ID is given iterate through all collections in cursor
             coll = Collections(conn)
             cherrypy.response.headers['Content-Type'] = 'application/json'
-            return JSONFactory(coll, Collection)
+            return JSONFactory(coll)
 
         try:
             coll = Collection(conn, collid=collid)
@@ -410,7 +410,7 @@ class MemberAPI(object):
 
             # If no ID is given iterate through all collections in cursor
             cherrypy.response.headers['Content-Type'] = 'application/json'
-            return JSONFactory(membList, Member)
+            return JSONFactory(membList)
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
