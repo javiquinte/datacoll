@@ -418,18 +418,19 @@ class JSONFactory(object):
             raise StopIteration
 
         # Load a record
-        reg = self.cursor.fetchone()
+        reg = self.cursor.next()
         if reg is None:
             # There are no records, close cursor and headers, set status = 3
             self.status = 3
             return b']}'
 
+        tosend = json.dumps(reg, cls=DCEncoder)
         if self.status == 1:
             self.status = 2
             # Send first collection
-            return reg.toJSON().encode()
+            return tosend.encode('utf-8')
         else:
             # Status=2 send a separator and a collection
-            return (', %s' % reg.toJSON()).encode()
+            return (', %s' % tosend).encode('utf-8')
 
     __next__ = next
