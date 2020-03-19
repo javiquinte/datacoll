@@ -305,27 +305,30 @@ class CollectionAPI(object):
         # _id must always be a str
         if isinstance(collid, bytes):
             collid = collid.decode('utf-8')
-        elif collid is not None:
+
+        if collid is not None:
             collid = str(collid)
 
-        try:
-            # This should raise an Exception if the Collection does not exist
-            coll = Collection(conn, collid)
+            try:
+                # This should raise an Exception if the Collection does not exist
+                coll = Collection(conn, collid)
 
-            # Otherwise send Error 400
-            msg = 'Collection with this ID already exists! (%s)'
-            messDict = {'code': 0,
-                        'message': msg % (collid)}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.log(message, traceback=True)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-        except Exception:
-            pass
+                # Otherwise send Error 400
+                msg = 'Collection with this ID already exists! (%s)'
+                messDict = {'code': 0,
+                            'message': msg % (collid)}
+                message = json.dumps(messDict, cls=DCEncoder)
+                cherrypy.log(message, traceback=True)
+                cherrypy.response.headers['Content-Type'] = 'application/json'
+                raise cherrypy.HTTPError(400, message)
+            except Exception:
+                pass
+        else:
+            coll = Collection(conn, None)
 
         try:
             # It is important to call insert inline with an empty Collection!
-            insertedid = Collection(conn, collid).insert(jsonColl)
+            insertedid = coll.insert(jsonColl)
             if isinstance(insertedid, bytes):
                 insertedid = insertedid.decode('utf-8')
 
