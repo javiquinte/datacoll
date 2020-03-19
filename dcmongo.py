@@ -146,7 +146,7 @@ class Members(object):
         :returns: The next member of the collection.
         :rtype: :class:`~MemberBase`
         """
-        return self.cursor.fetchone()
+        return self.cursor.next()
 
     def __del__(self):
         """Destructor of the list of Members."""
