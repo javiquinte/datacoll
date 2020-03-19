@@ -260,7 +260,7 @@ class CollectionAPI(object):
 
         try:
             coll = Collection(conn, collid=collid)
-        except:
+        except Exception:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict, cls=DCEncoder)
@@ -284,14 +284,14 @@ class CollectionAPI(object):
 
         try:
             coll = Collection(conn, collid=collid)
-        except:
+        except Exception:
             messDict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
             message = json.dumps(messDict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        # FIXME I must check if the object coll is being updated as in the DB!
+        # TODO I must check if the object coll is being updated as in the DB!
         coll.update(jsonColl)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
@@ -495,23 +495,14 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
             message = json.dumps(messDict, cls=DCEncoder)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         jsonMemb = json.loads(cherrypy.request.body.fp.read())
 
-        # Read only the fields that we support
-        pid = jsonMemb.get('pid', None)
-        location = jsonMemb.get('location', None)
-        checksum = jsonMemb.get('checksum', None)
-        datatype = jsonMemb.get('datatype', None)
-        index = jsonMemb.get('mappings', {}).get('index', None)
-
         try:
             member = Member(conn, collid=collid, memberid=memberid)
-        except:
-            # FIXME We need to check here the datatype by querying the
-            # collection and comparing with the restrictedToType attribute
-            # Send Error 404
+        except Exception:
             msg = 'Member %s from Collection %s not found!'
             messDict = {'code': 0,
                         'message': msg % (memberid, collid)}
@@ -520,57 +511,46 @@ class MemberAPI(object):
             raise cherrypy.HTTPError(400, message)
 
         # Check that the index does not collide with existent IDs
-        if index != memberid:
-            try:
-                Member(conn, collid=collid, memberid=index)
-                # Send Error 400
-                msg = 'Index %s is already used for Collection %s !'
-                messDict = {'code': 0,
-                            'message': msg % (index, collid)}
-                message = json.dumps(messDict, cls=DCEncoder)
-                cherrypy.response.headers['Content-Type'] = 'application/json'
-                raise cherrypy.HTTPError(400, message)
-            except:
-                pass
-
-        # Read the collection to check whether datatype is restricted
-        try:
-            coll = Collection(conn, collid=collid)
-        except:
-            msg = 'Error checking the collection properties!'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
+        # if index != memberid:
+        #     try:
+        #         Member(conn, collid=collid, memberid=index)
+        #         # Send Error 400
+        #         msg = 'Index %s is already used for Collection %s !'
+        #         messDict = {'code': 0,
+        #                     'message': msg % (index, collid)}
+        #         message = json.dumps(messDict, cls=DCEncoder)
+        #         cherrypy.response.headers['Content-Type'] = 'application/json'
+        #         raise cherrypy.HTTPError(400, message)
+        #     except:
+        #         pass
 
         # Check if the collection accepts only a particular datatype
-        if ((coll.restrictedtotype is not None) and
-                (datatype != coll.restrictedtotype)):
-            msg = 'Datatype error! Collection only accepts %s'
-            messDict = {'code': 0,
-                        'message': msg % coll.restrictedtotype}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
+        # if ((coll.restrictedtotype is not None) and
+        #         (datatype != coll.restrictedtotype)):
+        #     msg = 'Datatype error! Collection only accepts %s'
+        #     messDict = {'code': 0,
+        #                 'message': msg % coll.restrictedtotype}
+        #     message = json.dumps(messDict, cls=DCEncoder)
+        #     cherrypy.response.headers['Content-Type'] = 'application/json'
+        #     raise cherrypy.HTTPError(400, message)
 
-        member.update(conn, pid=pid, location=location, checksum=checksum,
-                      datatype=datatype, memberid=index)
+        # TODO I must check if the object is being updated as in the DB!
+        member.update(jsonMemb)
 
         # Read the member
-        try:
-            memb = Member(conn, collid=collid, memberid=index)
-        except:
-            # Send Error 400
-            msg = 'Member seems not to be properly saved.'
-            messDict = {'code': 0,
-                        'message': msg}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
+        # try:
+        #     memb = Member(conn, collid=collid, memberid=index)
+        # except:
+        #     # Send Error 400
+        #     msg = 'Member seems not to be properly saved.'
+        #     messDict = {'code': 0,
+        #                 'message': msg}
+        #     message = json.dumps(messDict, cls=DCEncoder)
+        #     cherrypy.response.headers['Content-Type'] = 'application/json'
+        #     raise cherrypy.HTTPError(400, message)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return memb.toJSON().encode()
+        return member.document
 
     # @checktokenhard
     def delete(self, collid, memberid, **kwargs):
@@ -578,20 +558,20 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
             message = json.dumps(messDict, cls=DCEncoder)
+            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
-        except:
+        except Exception:
             msg = 'Member ID %s within collection ID %s not found'
             messDict = {'code': 0,
                         'message': msg % (memberid, collid)}
             message = json.dumps(messDict, cls=DCEncoder)
-
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        member.delete(conn)
+        member.delete()
 
         return ""
 
