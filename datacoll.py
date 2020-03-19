@@ -350,11 +350,19 @@ class CollectionAPI(object):
 
     # @checktokensoft
     def get(self, collid=None, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+
         if collid is None:
-            # If no ID is given iterate through all collections in cursor
-            coll = Collections(conn)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            return JSONFactory(coll)
+            try:
+                # If no ID is given iterate through all collections in cursor
+                colls = Collections(conn)
+            except Exception:
+                messDict = {'code': 0,
+                            'message': 'Collection %s not found' % collid}
+                message = json.dumps(messDict, cls=DCEncoder)
+                raise cherrypy.HTTPError(404, message)
+
+            return dumps(colls).encode('utf-8')
 
         try:
             coll = Collection(conn, collid=collid)
