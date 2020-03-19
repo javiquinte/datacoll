@@ -144,6 +144,18 @@ class Members(object):
 
         self.cursor = conn.Member.find(clause)
 
+    def __iter__(self):
+        """Iterative method."""
+        return self
+
+    def __next__(self):
+        """Retrieve the next Member like a cursor.
+
+        :returns: The next member of the collection.
+        :rtype: :class:`~MemberBase`
+        """
+        return self.cursor.next()
+
     def fetchone(self):
         """Retrieve the next Member like a cursor.
 
