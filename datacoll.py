@@ -316,7 +316,7 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': msg % (collid)}
             message = json.dumps(messDict, cls=DCEncoder)
-            # cherrypy.log(message, traceback=True)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
         except Exception:
@@ -334,7 +334,7 @@ class CollectionAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection could not be inserted'}
             message = json.dumps(messDict, cls=DCEncoder)
-            # cherrypy.log(message, traceback=True)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -448,7 +448,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': 'Collection %s not found!' % collid}
             message = json.dumps(messDict, cls=DCEncoder)
-            # cherrypy.log(message, traceback=True)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -461,7 +461,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': msg % (collid, memberid)}
             message = json.dumps(messDict, cls=DCEncoder)
-            # cherrypy.log(message, traceback=True)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
         except Exception:
@@ -480,7 +480,7 @@ class MemberAPI(object):
             messDict = {'code': 0,
                         'message': msg}
             message = json.dumps(messDict, cls=DCEncoder)
-            # cherrypy.log(message, traceback=True)
+            cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
 
