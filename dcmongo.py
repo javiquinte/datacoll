@@ -109,7 +109,7 @@ class Collections(object):
 
     def fetchone(self):
         """Retrieve the next Collection like a cursor."""
-        return self.cursor.fetchone()
+        return self.cursor.next()
 
     def __del__(self):
         """Destructor of the list of Collections."""
@@ -119,7 +119,7 @@ class Collections(object):
 class Members(object):
     """Abstraction from the DB storage for a list of Members."""
 
-    def __init__(self, conn,  collid=None, limit=None):
+    def __init__(self, conn,  collid, limit=None):
         """Constructor of the list of Members.
 
         :param conn: Connection to the MySQL DB.
@@ -132,7 +132,7 @@ class Members(object):
         clause = dict()
         # Filter by owner if present in the parameters
         if collid is not None:
-            clause['_id'] = ObjectId(collid)
+            clause['_collectionId'] = ObjectId(collid)
 
         # TODO How to implement this?
         if limit:
@@ -241,7 +241,7 @@ class Collection(object):
 class Member(object):
     """Abstraction from the DB storage for the Member."""
 
-    def __init__(self, conn, collid=None, memberid=None):
+    def __init__(self, conn, collid, memberid=None):
         """Constructor of the Member.
 
         :param conn: Connection to the MySQL DB.
@@ -258,17 +258,19 @@ class Member(object):
         if collid is None:
             raise Exception('Empty collection ID!')
 
+        # _id must always be a str
+        if isinstance(collid, bytes):
+            self._collectionId = collid.decode('utf-8')
+        else:
+            self._collectionId = str(collid)
+
+        # TODO Check that there is actually a collection with such an ID
+
         # If no filters are given then return an empty object
         if memberid is None:
             self.document = dict()
             self._id = None
             return
-
-        # _id must always be a str
-        if isinstance(collid, bytes):
-            self._id = collid.decode('utf-8')
-        else:
-            self._id = str(collid)
 
         # _id must always be a str
         if isinstance(memberid, bytes):
@@ -277,6 +279,7 @@ class Member(object):
             self._id = str(memberid)
 
         self.document = conn.Member.find_one({'_id': ObjectId(self._id)})
+        self.document['_collectionId'] = self._collectionId
 
         # If the document do not exist create it in memory first
         if self.document is None:
@@ -342,7 +345,8 @@ class Member(object):
         :raises: Exception
         """
         if document is not None:
-            self.document = document
+            # Keep _collectionId in the internal document
+            self.document.update(document)
 
         # TODO What happens if _id is different?
         inserted = self.__conn.Member.insert_one(self.document)
