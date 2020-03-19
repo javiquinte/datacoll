@@ -419,9 +419,10 @@ class JSONFactory(object):
             raise StopIteration
 
         # Load a record
-        reg = self.cursor[self.index]
-        self.index += 1
-        if reg is None:
+        try:
+            reg = self.cursor[self.index]
+            self.index += 1
+        except IndexError:
             # There are no records, close cursor and headers, set status = 3
             self.status = 3
             return b']}'
