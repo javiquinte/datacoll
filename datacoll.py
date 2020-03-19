@@ -405,11 +405,18 @@ class MemberAPI(object):
 
     # @checktokensoft
     def get(self, collid, memberid, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
+
         if memberid is None:
-            membList = Members(conn, collid=collid)
+            try:
+                membList = Members(conn, collid=collid)
+            except Exception:
+                messDict = {'code': 0,
+                            'message': 'Collection %s not found' % collid}
+                message = json.dumps(messDict, cls=DCEncoder)
+                raise cherrypy.HTTPError(404, message)
 
             # If no ID is given iterate through all collections in cursor
-            cherrypy.response.headers['Content-Type'] = 'application/json'
             return JSONFactory(membList)
 
         try:
@@ -419,10 +426,8 @@ class MemberAPI(object):
                         'message': 'Member %s or Collection %s not found'
                         % (memberid, collid)}
             message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        cherrypy.response.headers['Content-Type'] = 'application/json'
         result = json.dumps(member.document, cls=DCEncoder)
         return result.encode('utf-8')
 

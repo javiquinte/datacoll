@@ -154,7 +154,7 @@ class Members(object):
 
     def __del__(self):
         """Destructor of the list of Members."""
-        self.cursor.close()
+        pass # self.cursor.close()
 
 
 class Collection(object):
