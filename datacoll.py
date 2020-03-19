@@ -444,11 +444,8 @@ class MemberAPI(object):
             collid = collid.decode('utf-8')
         elif collid is not None:
             collid = str(collid)
-        # _id must always be a str
-        if isinstance(memberid, bytes):
-            memberid = memberid.decode('utf-8')
-        elif memberid is not None:
-            memberid = str(memberid)
+        elif collid is None:
+            raise Exception('Cannot add Member to Collection None!')
 
         try:
             coll = Collection(conn, collid=collid)
@@ -461,25 +458,35 @@ class MemberAPI(object):
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        try:
-            # This should raise an Exception if the Member does not exist
-            m = Member(conn, collid, memberid)
+        # _id must always be a str
+        if isinstance(memberid, bytes):
+            memberid = memberid.decode('utf-8')
 
-            # Otherwise send Error 400
-            msg = 'Member with this ID already exists! (%s, %s)'
-            messDict = {'code': 0,
-                        'message': msg % (collid, memberid)}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.log(message, traceback=True)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-        except Exception:
-            pass
+        if memberid is not None:
+            memberid = str(memberid)
+
+            try:
+                # This should raise an Exception if the Member does not exist
+                m = Member(conn, collid, memberid)
+
+                # Otherwise send Error 400
+                msg = 'Member with this ID already exists! (%s, %s)'
+                messDict = {'code': 0,
+                            'message': msg % (collid, memberid)}
+                message = json.dumps(messDict, cls=DCEncoder)
+                cherrypy.log(message, traceback=True)
+                cherrypy.response.headers['Content-Type'] = 'application/json'
+                raise cherrypy.HTTPError(400, message)
+            except Exception:
+                pass
+
+        else:
+            m = Member(conn, collid, None)
 
         # FIXME Here we need to set also the datatype after checking the
         # restrictedToType attribute in the collection
         try:
-            insertedid = Member(conn, collid, memberid).insert(jsonMemb)
+            insertedid = m.insert(jsonMemb)
             if isinstance(insertedid, bytes):
                 insertedid = insertedid.decode('utf-8')
 
