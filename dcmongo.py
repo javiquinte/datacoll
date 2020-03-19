@@ -85,27 +85,32 @@ class urlFile(object):
 class Collections(object):
     """Abstraction from the DB storage for a list of Collections."""
 
-    def __init__(self, conn, owner=None, limit=None):
+    def __init__(self, conn, limit=None):
         """Constructor of the list of collections.
 
         :param conn: datacoll database in MongoDB.
         :type conn: Mongo database
-        :param owner: Mail of the owner of the collection.
-        :type owner: string
-        :param limit: Limit the number of records from the result.
-        :type limit: int
+        :raise: Exception
         """
 
         clause = dict()
-        # Filter by owner if present in the parameters
-        if owner is not None:
-            clause['owner'] = owner
-
         # TODO How to implement this?
         if limit:
             pass
 
         self.cursor = conn.Collection.find(clause)
+
+    def __iter__(self):
+        """Iterative method."""
+        return self
+
+    def __next__(self):
+        """Retrieve the next Collection like a cursor.
+
+        :returns: The next member of the collection.
+        :rtype: :class:`~CollectionBase`
+        """
+        return self.cursor.next()
 
     def fetchone(self):
         """Retrieve the next Collection like a cursor."""
@@ -113,7 +118,7 @@ class Collections(object):
 
     def __del__(self):
         """Destructor of the list of Collections."""
-        self.cursor.close()
+        pass # self.cursor.close()
 
 
 class Members(object):
