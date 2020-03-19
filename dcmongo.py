@@ -272,7 +272,7 @@ class Member(object):
 
         # If no filters are given then return an empty object
         if memberid is None:
-            self.document = dict()
+            self.document = {'_collectionId': ObjectId(self._collectionId)}
             self._id = None
             return
 
@@ -283,7 +283,7 @@ class Member(object):
             self._id = str(memberid)
 
         self.document = conn.Member.find_one({'_id': ObjectId(self._id)})
-        self.document['_collectionId'] = self._collectionId
+        self.document['_collectionId'] = ObjectId(self._collectionId)
 
         # If the document do not exist create it in memory first
         if self.document is None:
