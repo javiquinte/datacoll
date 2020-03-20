@@ -24,6 +24,7 @@ import json
 from urllib.request import Request
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from bson.json_util import loads
 
 here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
@@ -132,7 +133,7 @@ def getcollection(baseurl, collid=None):
     req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
-    coll = json.loads(u.read())
+    coll = loads(u.read())
     # Check that error code is 200
     if u.getcode() == 200:
         return coll
@@ -184,8 +185,34 @@ class DataCollTests(unittest.TestCase):
 
         return
 
-    def test_coll_rule(self):
-        """Rule based Collection."""
+    # def test_coll_rule(self):
+    #     """Rule based Collection."""
+    #     collid = createcollection(self.host, 'new-coll.json')
+    #     with open('new-memb.json') as fin:
+    #         memb = json.load(fin)
+    #     memberid = createmember(self.host, collid, 'new-memb.json')
+    #     memb2 = getmember(self.host, collid, memberid)
+    #
+    #     # Check that the ids are the same
+    #     self.assertEqual(memberid, memb2['memberid'], 'IDs differ!')
+    #     # Compare owner with the original one
+    #     msg = 'Location recorded differ with the original one!'
+    #     self.assertEqual(memb['location'], memb2['location'], msg)
+    #
+    #     collruleid = createcollection(self.host, 'new-coll-rule.json')
+    #     membersrule = getmember(self.host, collruleid)
+    #
+    #     # FIXME What else should I check?
+    #     # Probably that there is only one member!
+    #
+    #     deletemember(self.host, collid, memberid)
+    #     deletecollection(self.host, collid)
+    #     deletecollection(self.host, collruleid)
+    #     return
+
+    def test_memb_create_query_delete(self):
+        """Creation, query and deletion of a Member of a Collection."""
+
         collid = createcollection(self.host, 'new-coll.json')
         with open('new-memb.json') as fin:
             memb = json.load(fin)
@@ -226,6 +253,29 @@ class DataCollTests(unittest.TestCase):
                          'maxLength supposed to be -1 for this test!')
 
         deletecollection(self.host, collid)
+        return
+
+    def test_collections(self):
+        """List of Collections."""
+        with open('new-coll.json') as fin:
+            coll = json.load(fin)
+        collid1 = createcollection(self.host, 'new-coll.json')
+        collid2 = createcollection(self.host, 'new-coll.json')
+        coll2 = getcollection(self.host)
+
+        # Check that the ids are the same
+        collIds = {str(col['_id']) for col in coll2}
+        collNames = {col['name'] for col in coll2}
+
+        # Remove both IDs from both collections added
+        collIds.remove(collid1)
+        collIds.remove(collid2)
+        # And the name
+        collNames.remove(coll['name'])
+
+        deletecollection(self.host, collid2)
+        deletecollection(self.host, collid1)
+
         return
 
     def test_coll_missing(self):
