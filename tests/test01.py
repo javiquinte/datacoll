@@ -113,7 +113,7 @@ def getmember(baseurl, collid, memberid=None):
     req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
-    memb = json.loads(u.read())
+    memb = loads(u.read())
     # Check that error code is 200
     if u.getcode() == 200:
         return memb
@@ -273,9 +273,36 @@ class DataCollTests(unittest.TestCase):
         # And the name
         collNames.remove(coll['name'])
 
+        # Remove collections created by the test
         deletecollection(self.host, collid2)
         deletecollection(self.host, collid1)
+        return
 
+    def test_members(self):
+        """List of Members."""
+
+        collid = createcollection(self.host, 'new-coll.json')
+        with open('new-memb.json') as fin:
+            memb = json.load(fin)
+        memberid1 = createmember(self.host, collid, 'new-memb.json')
+        memberid2 = createmember(self.host, collid, 'new-memb.json')
+
+        memblist = getmember(self.host, collid)
+
+        # Check that the ids are the same
+        membIds = {str(memb['_id']) for memb in memblist}
+        membCheck = {memb['checksum'] for memb in memblist}
+
+        # Remove both IDs from both collections added
+        membIds.remove(memberid1)
+        membIds.remove(memberid2)
+        # And the name
+        membCheck.remove(memb['checksum'])
+
+        # Remove collections created by the test
+        deletemember(self.host, collid, memberid2)
+        deletemember(self.host, collid, memberid1)
+        deletecollection(self.host, collid)
         return
 
     def test_coll_missing(self):
