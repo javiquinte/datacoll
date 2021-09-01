@@ -30,16 +30,12 @@ import os
 import json
 import configparser
 # import gnupg
-import datetime
-import urllib
 from pymongo import MongoClient
-# from bson.objectid import ObjectId
 from bson.json_util import dumps
 from dcmongo import Collection
 from dcmongo import Collections
 from dcmongo import Member
 from dcmongo import Members
-from dcmongo import JSONFactory
 from dcmongo import DCEncoder
 
 version = '0.3a1'
@@ -66,14 +62,15 @@ here = os.path.dirname(__file__)
 config.read(os.path.join(here, cfgfile))
 
 # Read connection parameters
-host = config.get('mysql', 'host')
-user = config.get('mysql', 'user')
-password = config.get('mysql', 'password')
-db = config.get('mysql', 'db')
-limit = config.getint('mysql', 'limit')
+host = config.get('mongo', 'host')
+port = config.get('mongo', 'port')
+user = config.get('mongo', 'user')
+password = config.get('mongo', 'password')
+db = config.get('mongo', 'db')
+limit = config.getint('mongo', 'limit')
 
-client = MongoClient(host, 27017)
-conn = client['datacoll']
+client = MongoClient(host, port)
+conn = client[db]
 
 # Create the object to verify the signature in tokens
 # try:

@@ -4,8 +4,9 @@
 # CRITICAL, ERROR, WARNING, INFO, DEBUG
 verbosity = INFO
 
-[mysql]
+[mongo]
 host = localhost
+port = 27017
 user = datacoll
 password = datacoll
 db = datacoll
