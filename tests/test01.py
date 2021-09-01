@@ -31,10 +31,10 @@ sys.path.append(os.path.join(here, '..'))
 from unittestTools import WITestRunner
 
 
-global token
-
-with open(os.path.join(os.path.expanduser('~'), '.eidatoken')) as fin:
-    token = fin.read().encode('utf-8')
+# global token
+#
+# with open(os.path.join(os.path.expanduser('~'), '.eidatoken')) as fin:
+#     token = fin.read().encode('utf-8')
 
 
 def createcollection(baseurl, datafile):
@@ -42,7 +42,7 @@ def createcollection(baseurl, datafile):
         data = fin.read().encode('utf-8')
         req = Request('%s/collections' % baseurl, data=data)
         req.add_header("Content-Type", 'application/json')
-        req.add_header("Authorization", "Bearer %s" % token)
+        # req.add_header("Authorization", "Bearer %s" % token)
         # Create a collection
         u = urlopen(req)
         coll = json.loads(u.read())
@@ -59,7 +59,7 @@ def createmember(baseurl, collid, datafile):
         data = fin.read().encode()
         req = Request('%s/collections/%s/members' % (baseurl, collid), data=data)
         req.add_header("Content-Type", 'application/json')
-        req.add_header("Authorization", "Bearer %s" % token)
+        # req.add_header("Authorization", "Bearer %s" % token)
         # Create a member
         u = urlopen(req)
         memb = json.loads(u.read())
@@ -76,7 +76,7 @@ def deletemember(baseurl, collid, memberid):
     req = Request('%s/collections/%s/members/%s' %
                   (baseurl, collid, memberid))
     req.get_method = lambda: 'DELETE'
-    req.add_header("Authorization", "Bearer %s" % token)
+    # req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
     # Check that error code is 200
@@ -91,7 +91,7 @@ def deletecollection(baseurl, collid):
     req = Request('%s/collections/%s' %
                   (baseurl, collid))
     req.get_method = lambda: 'DELETE'
-    req.add_header("Authorization", "Bearer %s" % token)
+    # req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
     # Check that error code is 200
@@ -110,7 +110,7 @@ def getmember(baseurl, collid, memberid=None):
         req = Request('%s/collections/%s/members' %
                       (baseurl, collid))
 
-    req.add_header("Authorization", "Bearer %s" % token)
+    # req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
     memb = loads(u.read())
@@ -130,7 +130,7 @@ def getcollection(baseurl, collid=None):
         req = Request('%s/collections' %
                       (baseurl))
 
-    req.add_header("Authorization", "Bearer %s" % token)
+    # req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
     coll = loads(u.read())
@@ -146,7 +146,7 @@ def getcollcapabilities(baseurl, collid):
     req = Request('%s/collections/%s/capabilities' %
                   (baseurl, collid))
 
-    req.add_header("Authorization", "Bearer %s" % token)
+    # req.add_header("Authorization", "Bearer %s" % token)
 
     u = urlopen(req)
     capab = json.loads(u.read())
@@ -321,6 +321,7 @@ host = 'http://localhost:8080/rda/datacoll'
 
 def usage():
     """Print a help message clarifying the usage of this script file."""
+    # TODO Include usage instructions
     pass
 
 

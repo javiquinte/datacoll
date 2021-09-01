@@ -4,7 +4,7 @@ import unittest
 
 class WITestRunner(object):
 
-    def __init__(self, outStream=sys.stderr, mode=1):
+    def __init__(self, outstream=sys.stderr, mode=1):
         "Save the stream where the output will be printed"
 
         self.mode = mode
@@ -25,7 +25,7 @@ class WITestRunner(object):
             self.FAIL = ''
             self.ENDC = ''
 
-        self.outStream = outStream
+        self.outStream = outstream
         self.write(self.HEADER + '\nRunning test...\n' + self.ENDC)
 
     def write(self, message):
@@ -49,7 +49,7 @@ class WITestResult(unittest.TestResult):
     """A test result class that prints in colours to the console
     """
 
-    def __init__(self, testRunner, mode=1):
+    def __init__(self, testrunner, mode=1):
         unittest.TestResult.__init__(self)
 
         if mode:
@@ -69,7 +69,7 @@ class WITestResult(unittest.TestResult):
             self.FAIL = ''
             self.ENDC = ''
 
-        self.testRunner = testRunner
+        self.testRunner = testrunner
 
     def startTest(self, test):
         unittest.TestResult.startTest(self, test)
@@ -91,9 +91,9 @@ class WITestResult(unittest.TestResult):
         self.printErrorList('Error', self.errors)
         self.printErrorList('Failure', self.failures)
 
-    def printErrorList(self, errorType, errors):
+    def printErrorList(self, errortype, errors):
         for test, err in errors:
             self.testRunner.write('%s checking %s\n' %
-                                  (errorType, test.shortDescription()))
+                                  (errortype, test.shortDescription()))
             self.testRunner.write((self.WARNING + '    %s' + self.ENDC) %
                                   err.splitlines(True)[-1])

@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import json
 import irodsInterface
 from irods.models import DataObject
 from irods.models import Collection
-import urllib2 as ul
+import urllib.request as ul
 
 years = ['1993', '1994', '1995', '1996', '1997', '1998', '1999', '2000',
          '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008',
@@ -24,7 +24,7 @@ def createColl(name):
 
     Return either the collection or an error message (both in json format).
     """
-    print 'Creating collection with name = %s' % name
+    print('Creating collection with name = %s' % name)
 
     jsonColl = {
         "name": name,
@@ -36,7 +36,7 @@ def createColl(name):
         }
     }
 
-    req = ul.Request('%s/collections' % dcUrl, data=json.dumps(jsonColl))
+    req = ul.Request('%s/collections' % dcUrl, data=json.dumps(jsonColl).encode())
     req.add_header("Content-Type",'application/json')
     # Create a collection
     try:
@@ -53,14 +53,14 @@ def createMember(collID, do):
     """
     # print 'Creating member with name = %s' % do.name
 
-    jsonMember = {"location": "http://sec24c79.gfz-potsdam.de:8000/api/registered" + \
+    jsonmember = {"location": "http://sec24c79.gfz-potsdam.de:8000/api/registered" + \
                   do.path + "?download=true",
                   "checksum": do.checksum,
                   "datatype": "miniSEED"
                  }
 
     req = ul.Request('%s/collections/%d/members' %
-                     (dcUrl, collID), data=json.dumps(jsonMember))
+                     (dcUrl, collID), data=json.dumps(jsonmember).encode())
     req.add_header("Content-Type",'application/json')
     # Create a member
     try:
@@ -89,12 +89,12 @@ for yc in i.listDir(root).subcollections:
                                                        cc.name[:3], yc.name))
 
                 if 'message' in jsonColl.keys():
-                    print str(jsonColl)
+                    print(str(jsonColl))
 
                 for f in cc.data_objects:
                     if f.name.startswith(nc.name + '.' + sc.name + '.'):
                         try:
                             int(f.name[-3])
                             createMember(jsonColl['id'], f)
-                        except:
+                        except Exception:
                             continue

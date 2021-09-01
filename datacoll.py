@@ -29,7 +29,7 @@ import cherrypy
 import os
 import json
 import configparser
-import gnupg
+# import gnupg
 import datetime
 import urllib
 from pymongo import MongoClient
@@ -72,92 +72,91 @@ password = config.get('mysql', 'password')
 db = config.get('mysql', 'db')
 limit = config.getint('mysql', 'limit')
 
-# conn = MySQLdb.connect(host, user, password, db)
 client = MongoClient(host, 27017)
 conn = client['datacoll']
 
 # Create the object to verify the signature in tokens
-try:
-    gpg = gnupg.GPG(homedir='.gnupg')
-except TypeError:
-    gpg = gnupg.GPG(gnupghome='.gnupg')
+# try:
+#     gpg = gnupg.GPG(homedir='.gnupg')
+# except TypeError:
+#     gpg = gnupg.GPG(gnupghome='.gnupg')
 
 
-def verifysignature(access_token):
-    try:
-        verified = gpg.decrypt(access_token)
-
-    except Exception as e:
-        msg = "invalid token"
-        raise Exception("%s: %s" % (msg, str(e)))
-
-    if verified.trust_level is None or verified.trust_level < verified.TRUST_FULLY:
-        msg = "token has an invalid signature"
-        raise Exception(msg)
-
-    try:
-        attributes = json.loads(verified.data)
-        d1 = datetime.datetime.strptime(attributes['valid_until'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        lifetime = (datetime.datetime.utcnow() - d1).seconds
-
-    except Exception as e:
-        msg = "token has invalid validity"
-        raise Exception("%s: %s" % (msg, str(e)))
-
-    if lifetime <= 0:
-        msg = "token is expired"
-        raise Exception(msg)
-
-
-def checktokensoft(f):
-    def checktokenintern(*a, **kw):
-        if kw.get('access_token', True) is None:
-            del kw['access_token']
-
-        if 'Authorization' in cherrypy.request.headers:
-            assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
-            kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
-
-        try:
-            if kw.get('access_token', None) is not None:
-                kw['access_token'] = urllib.parse.unquote(kw['access_token'])
-                verifysignature(kw['access_token'])
-
-        except Exception as e:
-            messDict = {'code': 0,
-                        'message': str(e)}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
-        return f(*a, **kw)
-
-    return checktokenintern
+# def verifysignature(access_token):
+#     try:
+#         verified = gpg.decrypt(access_token)
+#
+#     except Exception as e:
+#         msg = "invalid token"
+#         raise Exception("%s: %s" % (msg, str(e)))
+#
+#     if verified.trust_level is None or verified.trust_level < verified.TRUST_FULLY:
+#         msg = "token has an invalid signature"
+#         raise Exception(msg)
+#
+#     try:
+#         attributes = json.loads(verified.data)
+#         d1 = datetime.datetime.strptime(attributes['valid_until'], "%Y-%m-%dT%H:%M:%S.%fZ")
+#         lifetime = (datetime.datetime.utcnow() - d1).seconds
+#
+#     except Exception as e:
+#         msg = "token has invalid validity"
+#         raise Exception("%s: %s" % (msg, str(e)))
+#
+#     if lifetime <= 0:
+#         msg = "token is expired"
+#         raise Exception(msg)
 
 
-def checktokenhard(f):
-    def checktokenintern(*a, **kw):
-        if 'Authorization' in cherrypy.request.headers:
-            assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
-            kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
+# def checktokensoft(f):
+#     def checktokenintern(*a, **kw):
+#         if kw.get('access_token', True) is None:
+#             del kw['access_token']
+#
+#         if 'Authorization' in cherrypy.request.headers:
+#             assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
+#             kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
+#
+#         try:
+#             if kw.get('access_token', None) is not None:
+#                 kw['access_token'] = urllib.parse.unquote(kw['access_token'])
+#                 verifysignature(kw['access_token'])
+#
+#         except Exception as e:
+#             messDict = {'code': 0,
+#                         'message': str(e)}
+#             message = json.dumps(messDict, cls=DCEncoder)
+#             cherrypy.response.headers['Content-Type'] = 'application/json'
+#             raise cherrypy.HTTPError(400, message)
+#
+#         return f(*a, **kw)
+#
+#     return checktokenintern
 
-        if kw.get('access_token', True) is None:
-            del kw['access_token']
 
-        try:
-            kw['access_token'] = urllib.parse.unquote(kw['access_token'])
-            verifysignature(kw['access_token'])
-
-            return f(*a, **kw)
-
-        except Exception as e:
-            messDict = {'code': 0,
-                        'message': str(e)}
-            message = json.dumps(messDict, cls=DCEncoder)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            raise cherrypy.HTTPError(400, message)
-
-    return checktokenintern
+# def checktokenhard(f):
+#     def checktokenintern(*a, **kw):
+#         if 'Authorization' in cherrypy.request.headers:
+#             assert cherrypy.request.headers['Authorization'].split()[0] == 'Bearer'
+#             kw['access_token'] = cherrypy.request.headers['Authorization'].split()[1]
+#
+#         if kw.get('access_token', True) is None:
+#             del kw['access_token']
+#
+#         try:
+#             kw['access_token'] = urllib.parse.unquote(kw['access_token'])
+#             verifysignature(kw['access_token'])
+#
+#             return f(*a, **kw)
+#
+#         except Exception as e:
+#             messDict = {'code': 0,
+#                         'message': str(e)}
+#             message = json.dumps(messDict, cls=DCEncoder)
+#             cherrypy.response.headers['Content-Type'] = 'application/json'
+#             raise cherrypy.HTTPError(400, message)
+#
+#     return checktokenintern
 
 
 class Application(object):
@@ -216,19 +215,19 @@ class CollectionAPI(object):
         # To be modified in the future with mutable collections
         try:
             coll = Collection(conn, collid=collid)
-        except:
-            messDict = {'code': 0,
+        except Exception:
+            messdict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
-        auxCap = capabilitiesFixed.copy()
+        auxcap = capabilitiesFixed.copy()
         # TODO See if capabilities should stay out side from Collection
         # auxCap['restrictedtotype'] = coll.restrictedtotype
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        return json.dumps(auxCap, cls=DCEncoder).encode('utf-8')
+        return json.dumps(auxcap, cls=DCEncoder).encode('utf-8')
 
     @cherrypy.expose
     def index(self, collid=None, **kwargs):
@@ -245,26 +244,26 @@ class CollectionAPI(object):
         if cherrypy.request.method == 'DELETE':
             return self.delete(collid, **kwargs)
 
-        messDict = {'code': 0,
+        messdict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
-        message = json.dumps(messDict, cls=DCEncoder)
+        message = json.dumps(messdict, cls=DCEncoder)
         raise cherrypy.HTTPError(400, message)
 
     # @checktokenhard
     def delete(self, collid, **kwargs):
         if collid is None:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'No collection ID was received!'}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
         try:
             coll = Collection(conn, collid=collid)
         except Exception:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -275,32 +274,32 @@ class CollectionAPI(object):
     # @checktokenhard
     def put(self, collid, **kwargs):
         if collid is None:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'No collection ID was received!'}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
-        jsonColl = json.loads(cherrypy.request.body.fp.read())
+        jsoncoll = json.loads(cherrypy.request.body.fp.read())
 
         try:
             coll = Collection(conn, collid=collid)
         except Exception:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
         # TODO I must check if the object coll is being updated as in the DB!
-        coll.update(jsonColl)
+        coll.update(jsoncoll)
 
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return coll.document
 
     # @checktokenhard
     def post(self, collid, **kwargs):
-        jsonColl = json.loads(cherrypy.request.body.fp.read())
+        jsoncoll = json.loads(cherrypy.request.body.fp.read())
 
         # _id must always be a str
         if isinstance(collid, bytes):
@@ -315,9 +314,9 @@ class CollectionAPI(object):
 
                 # Otherwise send Error 400
                 msg = 'Collection with this ID already exists! (%s)'
-                messDict = {'code': 0,
+                messdict = {'code': 0,
                             'message': msg % (collid)}
-                message = json.dumps(messDict, cls=DCEncoder)
+                message = json.dumps(messdict, cls=DCEncoder)
                 cherrypy.log(message, traceback=True)
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 raise cherrypy.HTTPError(400, message)
@@ -328,16 +327,16 @@ class CollectionAPI(object):
 
         try:
             # It is important to call insert inline with an empty Collection!
-            insertedid = coll.insert(jsonColl)
+            insertedid = coll.insert(jsoncoll)
             if isinstance(insertedid, bytes):
                 insertedid = insertedid.decode('utf-8')
 
             coll = Collection(conn, insertedid)
         except Exception:
             # Send Error 400
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Collection could not be inserted'}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
@@ -357,9 +356,9 @@ class CollectionAPI(object):
                 # If no ID is given iterate through all collections in cursor
                 colls = Collections(conn)
             except Exception:
-                messDict = {'code': 0,
+                messdict = {'code': 0,
                             'message': 'Collection %s not found' % collid}
-                message = json.dumps(messDict, cls=DCEncoder)
+                message = json.dumps(messdict, cls=DCEncoder)
                 raise cherrypy.HTTPError(404, message)
 
             return dumps(colls).encode('utf-8')
@@ -367,9 +366,9 @@ class CollectionAPI(object):
         try:
             coll = Collection(conn, collid=collid)
         except Exception:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Collection ID %s not found' % collid}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 
@@ -393,6 +392,7 @@ class MemberAPI(object):
 
     @cherrypy.expose
     def properties(self, collid, memberid):
+        # TODO Implement properties method
         return 'Not implemented!'
 
     @cherrypy.expose
@@ -410,9 +410,9 @@ class MemberAPI(object):
         if cherrypy.request.method == 'DELETE':
             return self.delete(collid, memberid, **kwargs)
 
-        messDict = {'code': 0,
+        messdict = {'code': 0,
                     'message': 'Method %s not recognized/implemented!' % cherrypy.request.method}
-        message = json.dumps(messDict, cls=DCEncoder)
+        message = json.dumps(messdict, cls=DCEncoder)
         raise cherrypy.HTTPError(400, message)
 
     # @checktokensoft
@@ -421,23 +421,23 @@ class MemberAPI(object):
 
         if memberid is None:
             try:
-                membList = Members(conn, collid=collid)
+                memblist = Members(conn, collid=collid)
             except Exception:
-                messDict = {'code': 0,
+                messdict = {'code': 0,
                             'message': 'Collection %s not found' % collid}
-                message = json.dumps(messDict, cls=DCEncoder)
+                message = json.dumps(messdict, cls=DCEncoder)
                 raise cherrypy.HTTPError(404, message)
 
             # If no ID is given iterate through all collections in cursor
-            return dumps(membList).encode('utf-8')
+            return dumps(memblist).encode('utf-8')
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
         except Exception:
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Member %s or Collection %s not found'
                         % (memberid, collid)}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             raise cherrypy.HTTPError(404, message)
 
         result = json.dumps(member.document, cls=DCEncoder)
@@ -445,7 +445,7 @@ class MemberAPI(object):
 
     # @checktokenhard
     def post(self, collid, memberid, **kwargs):
-        jsonMemb = json.loads(cherrypy.request.body.fp.read())
+        jsonmemb = json.loads(cherrypy.request.body.fp.read())
 
         # _id must always be a str
         if isinstance(collid, bytes):
@@ -457,11 +457,11 @@ class MemberAPI(object):
 
         try:
             coll = Collection(conn, collid=collid)
-        except:
+        except Exception:
             # Send Error 404
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': 'Collection %s not found!' % collid}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
@@ -479,9 +479,9 @@ class MemberAPI(object):
 
                 # Otherwise send Error 400
                 msg = 'Member with this ID already exists! (%s, %s)'
-                messDict = {'code': 0,
+                messdict = {'code': 0,
                             'message': msg % (collid, memberid)}
-                message = json.dumps(messDict, cls=DCEncoder)
+                message = json.dumps(messdict, cls=DCEncoder)
                 cherrypy.log(message, traceback=True)
                 cherrypy.response.headers['Content-Type'] = 'application/json'
                 raise cherrypy.HTTPError(400, message)
@@ -491,19 +491,18 @@ class MemberAPI(object):
         else:
             m = Member(conn, collid, None)
 
-        # FIXME Here we need to set also the datatype after checking the
-        # restrictedToType attribute in the collection
+        # FIXME Here we need to set also the datatype after checking the restrictedToType attribute in the collection
         try:
-            insertedid = m.insert(jsonMemb)
+            insertedid = m.insert(jsonmemb)
             if isinstance(insertedid, bytes):
                 insertedid = insertedid.decode('utf-8')
 
             memb = Member(conn, collid, insertedid)
         except Exception:
             msg = 'Member could not be inserted'
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': msg}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.log(message, traceback=True)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, msg)
@@ -515,22 +514,22 @@ class MemberAPI(object):
 
     # @checktokenhard
     def put(self, collid, memberid, **kwargs):
-        if((collid is None) or (memberid is None)):
-            messDict = {'code': 0,
+        if (collid is None) or (memberid is None):
+            messdict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
-        jsonMemb = json.loads(cherrypy.request.body.fp.read())
+        jsonmemb = json.loads(cherrypy.request.body.fp.read())
 
         try:
             member = Member(conn, collid=collid, memberid=memberid)
         except Exception:
             msg = 'Member %s from Collection %s not found!'
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': msg % (memberid, collid)}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -559,7 +558,7 @@ class MemberAPI(object):
         #     raise cherrypy.HTTPError(400, message)
 
         # TODO I must check if the object is being updated as in the DB!
-        member.update(jsonMemb)
+        member.update(jsonmemb)
 
         # Read the member
         # try:
@@ -578,10 +577,10 @@ class MemberAPI(object):
 
     # @checktokenhard
     def delete(self, collid, memberid, **kwargs):
-        if((collid is None) or (memberid is None)):
-            messDict = {'code': 0,
+        if (collid is None) or (memberid is None):
+            messdict = {'code': 0,
                         'message': 'No member or collection ID was received!'}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(400, message)
 
@@ -589,9 +588,9 @@ class MemberAPI(object):
             member = Member(conn, collid=collid, memberid=memberid)
         except Exception:
             msg = 'Member ID %s within collection ID %s not found'
-            messDict = {'code': 0,
+            messdict = {'code': 0,
                         'message': msg % (memberid, collid)}
-            message = json.dumps(messDict, cls=DCEncoder)
+            message = json.dumps(messdict, cls=DCEncoder)
             cherrypy.response.headers['Content-Type'] = 'application/json'
             raise cherrypy.HTTPError(404, message)
 

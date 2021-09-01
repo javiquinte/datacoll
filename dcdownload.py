@@ -24,7 +24,7 @@ import logging
 import json
 import configparser
 import cgi
-import MySQLdb
+from pymongo import MongoClient
 from wsgicomm import WINotFoundError
 from wsgicomm import WIRedirect
 
@@ -45,7 +45,7 @@ class DC_Module(object):
 
     """
 
-    def __init__(self, dc, confFile='../datacoll.cfg'):
+    def __init__(self, dc, conffile='../datacoll.cfg'):
         """Constructor from DC_Module."""
         dc.registerAction('GET', ("collections", "*", "members", "*",
                                   "download"), self.memberDownload)
@@ -55,7 +55,7 @@ class DC_Module(object):
 
         config = configparser.RawConfigParser()
         here = os.path.dirname(__file__)
-        config.read(os.path.join(here, confFile))
+        config.read(os.path.join(here, conffile))
 
         # Read connection parameters
         self.host = config.get('mysql', 'host')
@@ -64,6 +64,7 @@ class DC_Module(object):
         self.db = config.get('mysql', 'db')
         self.limit = config.getint('mysql', 'limit')
 
+        # TODO Check if this is needed
         self.conn = MySQLdb.connect(self.host, self.user, self.password,
                                     self.db)
 
@@ -89,12 +90,12 @@ class DC_Module(object):
 
         try:
             cid = int(splitColl[1])
-        except:
+        except Exception:
             cid = None
 
         try:
             mid = int(splitColl[3])
-        except:
+        except Exception:
             mid = None
 
         cursor = self.conn.cursor()
@@ -118,7 +119,7 @@ class DC_Module(object):
         logging.debug(str(sqlParams))
         try:
             cursor.execute(query, tuple(sqlParams))
-        except:
+        except Exception:
             messDict = {'code': 0,
                         'message': 'Error searching for member %s' % mid}
             message = json.dumps(messDict)

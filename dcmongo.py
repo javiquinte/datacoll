@@ -20,7 +20,7 @@
 """
 
 import json
-import urllib as ul
+import urllib.request as ul
 import datetime
 from bson.objectid import ObjectId
 
@@ -66,16 +66,16 @@ class urlFile(object):
 
     def __iter__(self):
         """Method to iterate on the content."""
-        blockSize = 1024 * 1024
+        blocksize = 1024 * 1024
 
         req = ul.Request(self.url)
         try:
             u = ul.urlopen(req)
-            buf = u.read(blockSize)
+            buf = u.read(blocksize)
             while len(buf):
                 # Read first block of data
                 yield buf
-                buf = u.read(blockSize)
+                buf = u.read(blocksize)
         except Exception as e:
             print('Exception %s' % str(e))
 
@@ -306,43 +306,43 @@ class Member(object):
         if self.document is None:
             raise Exception('Member %s does not exist!' % self._id)
 
-    def download(self):
-        """Download a Member from the MySQL DB.
-
-        :param conn: Connection to the MySQL DB.
-        :type conn: MySQLdb.connections.Connection
-        """
-        cursor = conn.cursor()
-        query = 'select m.pid, m.url from member as m inner join collection '
-        query = query + 'as c on m.cid = c.id'
-
-        whereClause = list()
-        whereClause.append('c.id = %s')
-        sqlParams = [self.collid]
-
-        whereClause.append('m.id = %s')
-        sqlParams.append(self.memberid)
-
-        query = query + ' where ' + ' and '.join(whereClause)
-
-        try:
-            cursor.execute(query, tuple(sqlParams))
-        except:
-            messDict = {'code': 0,
-                        'message': 'Error searching for member %s' % self.memberid}
-            message = json.dumps(messDict)
-            raise Exception(message)
-
-        # Get the PID and solve it through Handle
-        dbPid, dbUrl = cursor.fetchone()
-
-        if dbPid is not None:
-            url = 'http://hdl.handle.net/%s' % dbPid
-        else:
-            url = dbUrl
-
-        cursor.close()
-        return url
+    # def download(self):
+    #     """Download a Member from the MySQL DB.
+    #
+    #     :param conn: Connection to the MySQL DB.
+    #     :type conn: MySQLdb.connections.Connection
+    #     """
+    #     cursor = self.__conn.cursor()
+    #     query = 'select m.pid, m.url from member as m inner join collection '
+    #     query = query + 'as c on m.cid = c.id'
+    #
+    #     whereClause = list()
+    #     whereClause.append('c.id = %s')
+    #     sqlParams = [self.collid]
+    #
+    #     whereClause.append('m.id = %s')
+    #     sqlParams.append(self.memberid)
+    #
+    #     query = query + ' where ' + ' and '.join(whereClause)
+    #
+    #     try:
+    #         cursor.execute(query, tuple(sqlParams))
+    #     except:
+    #         messDict = {'code': 0,
+    #                     'message': 'Error searching for member %s' % self.memberid}
+    #         message = json.dumps(messDict)
+    #         raise Exception(message)
+    #
+    #     # Get the PID and solve it through Handle
+    #     dbPid, dbUrl = cursor.fetchone()
+    #
+    #     if dbPid is not None:
+    #         url = 'http://hdl.handle.net/%s' % dbPid
+    #     else:
+    #         url = dbUrl
+    #
+    #     cursor.close()
+    #     return url
 
     def delete(self):
         """Delete a Member from the MySQL DB.
