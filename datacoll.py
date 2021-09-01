@@ -63,7 +63,7 @@ config.read(os.path.join(here, cfgfile))
 
 # Read connection parameters
 host = config.get('mongo', 'host')
-port = config.get('mongo', 'port')
+port = config.getint('mongo', 'port')
 user = config.get('mongo', 'user')
 password = config.get('mongo', 'password')
 db = config.get('mongo', 'db')
