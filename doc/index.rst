@@ -111,38 +111,31 @@ Info and 4) Debug.
     # CRITICAL, ERROR, WARNING, INFO, DEBUG
     verbosity = INFO
 
-MySQL
-"""""
+MongoDB
+"""""""
 
-In the mysql section a server must be defined, from which the actual data
+In the mongo section a server must be defined, from which the actual data
 collections can be retrieved and also stored.
 
 .. code-block:: ini
 
-    [mysql]
-    host = localhost
-    user = dcusername
-    password = dcpassword
-    db = datacoll
-    limit = 500
+   [mongo]
+   host = localhost
+   port = 27017
+   user = mongouser
+   password = mongopass
+   db = datacoll
+   limit = 500
 
 Installation problems
 ^^^^^^^^^^^^^^^^^^^^^
 
 Always check the log output for clues.
 
-If you visit http://127.0.0.1:8080/rda/datacoll/version on your machine
+If you visit http://localhost:8080/rda/datacoll/version on your machine
 you should see the version information of the deployed service ::
 
-    0.2a1
+    0.3a1
 
 If this information cannot be retrieved, the installation was not successful.
 If this **does** show up, check that the information there looks correct.
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
