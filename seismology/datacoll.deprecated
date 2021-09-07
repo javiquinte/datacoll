@@ -588,7 +588,7 @@ class DataColl(object):
         """Constructor of the DataColl object."""
         config = configparser.RawConfigParser()
         here = os.path.dirname(__file__)
-        config.read(os.path.join(here, 'datacoll.cfg'))
+        config.read(os.path.join(here, '../datacoll/datacoll.cfg'))
 
         # Read connection parameters
         self.host = config.get('mysql', 'host')

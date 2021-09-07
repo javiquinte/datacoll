@@ -42,16 +42,16 @@ class irodsFile(object):
 
     def __iter__(self):
         """Iterator to read the file."""
-        blockSize = 500 * 1024
+        blocksize = 500 * 1024
 
         try:
             obj = self.sess.data_objects.get(self.fullPath)
             with obj.open('r') as f:
                 # Read first block of data
-                buff = f.read(blockSize)
+                buff = f.read(blocksize)
                 while len(buff):
                     yield buff
-                    buff = f.read(blockSize)
+                    buff = f.read(blocksize)
         except Exception as e:
             logging.error('Exception', str(e))
 
