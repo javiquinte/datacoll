@@ -40,9 +40,11 @@ class DigitalObject(object):
     """Representation of a digital object"""
     def __init__(self, uri: str, checksum: str = None, mimetype: str = None):
         # Possibly is a path
-        if os.path.isfile(uri) and (checksum is None):
-            # Calculate checksum
-            checksum = hashlib.md5(uri).hexdigest()
+        if os.path.isfile(uri):
+            uri = os.path.abspath(uri)
+            if checksum is None:
+                # Calculate checksum
+                checksum = hashlib.md5(open(uri, 'rb').read()).hexdigest()
 
         self.uri = uri
         self.checksum = checksum
@@ -57,18 +59,19 @@ class DigitalObject(object):
 class Member(object):
     def __init__(self, location: str = None, checksum: str = None, datatype: str = None, jsondesc: dict = None):
         # Check that a datatype is defined
-        if (datatype is None) and ('datatype' in jsondesc):
+        if (datatype is None) and (jsondesc is not None) and ('datatype' in jsondesc):
             datatype = jsondesc['datatype']
 
         self.do = DigitalObject(location, checksum, datatype)
 
-        self.json = jsondesc
-        # Copy datatype from DO
-        if ('datatype' not in jsondesc) or (not len(jsondesc['datatype'])):
+        self.json = jsondesc if jsondesc is not None else dict()
+        # Copy data from DO
+        self.json['location'] = self.do.uri
+        if ('datatype' not in self.json) or (not len(self.json['datatype'])):
             self.json['datatype'] = self.do.mimetype
 
         # Copy checksum from DO
-        if ('checksum' not in jsondesc) or (not len(jsondesc['checksum'])):
+        if ('checksum' not in self.json) or (not len(self.json['checksum'])):
             self.json['checksum'] = self.do.checksum
 
         # if ('pid' not in self.json) or (not len(self.json['pid'])):
@@ -80,7 +83,7 @@ class Collection(object):
         # Check that an owner is defined Priority is parameter, json, default owner
         if owner is not None:
             pass
-        elif ('properties' in jsondesc) and ('ownership' in jsondesc['properties']):
+        elif (jsondesc is not None) and ('properties' in jsondesc) and ('ownership' in jsondesc['properties']):
             owner = jsondesc['properties']['ownership']
         else:
             owner = ''
@@ -88,15 +91,17 @@ class Collection(object):
         # Check the name of the collection. Priority is parameter, json, directory name
         if name is not None:
             pass
-        elif 'name' in jsondesc:
+        elif (jsondesc is not None) and ('name' in jsondesc):
             name = jsondesc['name']
         elif directory is not None:
-            name = os.path.dirname(directory)
+            name = os.path.split(os.path.abspath(directory))[-1]
         else:
             raise Exception('Collection needs a name')
 
-        self.json = jsondesc
+        self.json = jsondesc if jsondesc is not None else dict()
         self.json['name'] = name
+        if 'properties' not in self.json:
+            self.json['properties'] = dict()
         self.json['properties']['ownership'] = owner
 
         if ('pid' not in self.json) or (not len(self.json['pid'])):
@@ -108,12 +113,18 @@ class Collection(object):
             logging.info('Scanning directory %s' % directory)
             # TODO Add members after scanning
 
+    def __iter__(self):
+        for m in self.__members:
+            yield m
+        return
+
     def addmember(self, member: Member):
         if not isinstance(member, (Member, Collection)):
             raise Exception('A member can only be of type Member or Collection')
         self.__members.append(member)
 
 
+# TODO Check this!
 class DataCollectionClient(object):
     def __init__(self, host: str = None):
         self.host = host if host is not None else 'http://localhost:8080/rda/datacoll'
@@ -230,192 +241,3 @@ class DataCollectionClient(object):
             return capab
 
         raise Exception('Error retrieving capabilities.')
-
-
-class DataCollTests(unittest.TestCase):
-    """Test the functionality of the Data Collection Service."""
-
-    @classmethod
-    def setUp(cls):
-        """Setting up test."""
-        cls.host = host
-
-    def test_features(self):
-        """'features' method of the system."""
-        req = Request('%s/features' % self.host)
-        # Call the features method
-        try:
-            u = urlopen(req)
-            feat = json.loads(u.read())
-            # Check that the error code is 200
-            self.assertEqual(u.getcode(), 200, 'Error code 200 was expected!')
-            # Check that providesCollectionPids is among the keys
-            self.assertTrue('providesCollectionPids' in feat.keys(),
-                            'providesCollectionPids not in features fields!')
-            # Check that ruleBasedGeneration is among the keys
-            self.assertTrue('ruleBasedGeneration' in feat.keys(),
-                            'ruleBasedGeneration not in features fields!')
-        except Exception as e:
-            self.assertTrue(False, 'Error: %s' % e)
-
-        return
-
-    # def test_coll_rule(self):
-    #     """Rule based Collection."""
-    #     collid = createcollection(self.host, 'new-coll.json')
-    #     with open('new-memb.json') as fin:
-    #         memb = json.load(fin)
-    #     memberid = createmember(self.host, collid, 'new-memb.json')
-    #     memb2 = getmember(self.host, collid, memberid)
-    #
-    #     # Check that the ids are the same
-    #     self.assertEqual(memberid, memb2['memberid'], 'IDs differ!')
-    #     # Compare owner with the original one
-    #     msg = 'Location recorded differ with the original one!'
-    #     self.assertEqual(memb['location'], memb2['location'], msg)
-    #
-    #     collruleid = createcollection(self.host, 'new-coll-rule.json')
-    #     membersrule = getmember(self.host, collruleid)
-    #
-    #     # FIXME What else should I check?
-    #     # Probably that there is only one member!
-    #
-    #     deletemember(self.host, collid, memberid)
-    #     deletecollection(self.host, collid)
-    #     deletecollection(self.host, collruleid)
-    #     return
-
-    def test_memb_create_query_delete(self):
-        """Creation, query and deletion of a Member of a Collection."""
-
-        collid = createcollection(self.host, 'new-coll.json')
-        with open('new-memb.json') as fin:
-            memb = json.load(fin)
-        memberid = createmember(self.host, collid, 'new-memb.json')
-        memb2 = getmember(self.host, collid, memberid)
-
-        # Check that the ids are the same
-        self.assertEqual(memberid, str(memb2['_id']), 'IDs differ!')
-
-        # Get all members from the collection (only 1)
-        members = getmember(self.host, collid)
-
-        # TODO Check probably that there is only one member!
-
-        deletemember(self.host, collid, memberid)
-        deletecollection(self.host, collid)
-        return
-
-    def test_coll_create_query_delete(self):
-        """Creation, query and deletion of a Collection."""
-        with open('new-coll.json') as fin:
-            coll = json.load(fin)
-        collid = createcollection(self.host, 'new-coll.json')
-        coll2 = getcollection(self.host, collid)
-
-        # Check that the ids are the same
-        self.assertEqual(collid, str(coll2['_id']), 'IDs differ!')
-        # Compare owner with the original one
-        self.assertEqual(coll['properties']['ownership'],
-                         coll2['properties']['ownership'],
-                         'Owner provided differ with original one!')
-
-        # Query the collection capabilities
-        capab = getcollcapabilities(self.host, collid)
-
-        # Check that the capabilities have at least the maxLength field
-        self.assertEqual(capab['maxLength'], -1,
-                         'maxLength supposed to be -1 for this test!')
-
-        deletecollection(self.host, collid)
-        return
-
-    def test_collections(self):
-        """List of Collections."""
-        with open('new-coll.json') as fin:
-            coll = json.load(fin)
-        collid1 = createcollection(self.host, 'new-coll.json')
-        collid2 = createcollection(self.host, 'new-coll.json')
-        coll2 = getcollection(self.host)
-
-        # Check that the ids are the same
-        collIds = {str(col['_id']) for col in coll2}
-        collNames = {col['name'] for col in coll2}
-
-        # Remove both IDs from both collections added
-        collIds.remove(collid1)
-        collIds.remove(collid2)
-        # And the name
-        collNames.remove(coll['name'])
-
-        # Remove collections created by the test
-        deletecollection(self.host, collid2)
-        deletecollection(self.host, collid1)
-        return
-
-    def test_members(self):
-        """List of Members."""
-
-        collid = createcollection(self.host, 'new-coll.json')
-        with open('new-memb.json') as fin:
-            memb = json.load(fin)
-        memberid1 = createmember(self.host, collid, 'new-memb.json')
-        memberid2 = createmember(self.host, collid, 'new-memb.json')
-
-        memblist = getmember(self.host, collid)
-
-        # Check that the ids are the same
-        membIds = {str(memb['_id']) for memb in memblist}
-        membCheck = {memb['checksum'] for memb in memblist}
-
-        # Remove both IDs from both collections added
-        membIds.remove(memberid1)
-        membIds.remove(memberid2)
-        # And the name
-        membCheck.remove(memb['checksum'])
-
-        # Remove collections created by the test
-        deletemember(self.host, collid, memberid2)
-        deletemember(self.host, collid, memberid1)
-        deletecollection(self.host, collid)
-        return
-
-    def test_coll_missing(self):
-        """Try to retrieve a non-existing Collection."""
-
-        msg = 'Retrieving a non-existing collection should raise a HTTPError'
-        with self.assertRaises(HTTPError):
-            getcollection(self.host, 'non-existing-collection')
-        return
-
-
-global host
-
-host = 'http://localhost:8080/rda/datacoll'
-
-
-def usage():
-    """Print a help message clarifying the usage of this script file."""
-    # TODO Include usage instructions
-    pass
-
-
-if __name__ == '__main__':
-
-    # 0=Plain mode (good for printing); 1=Colourful mode
-    mode = 1
-
-    # The default host is localhost
-    for ind, arg in enumerate(sys.argv):
-        if arg in ('-p', '--plain'):
-            del sys.argv[ind]
-            mode = 0
-        elif arg == '-u':
-            host = sys.argv[ind + 1]
-            del sys.argv[ind + 1]
-            del sys.argv[ind]
-        elif arg in ('-h', '--help'):
-            usage()
-            sys.exit(0)
-
-    unittest.main(testRunner=WITestRunner(mode=mode))
