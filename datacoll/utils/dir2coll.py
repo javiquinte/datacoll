@@ -3,8 +3,6 @@
 import json
 import os
 import argparse
-import hashlib
-import mimetypes
 import urllib.request as ul
 from datacoll.core import Collection
 from datacoll.core import Member
@@ -13,7 +11,6 @@ version = '0.1'
 
 dcUrl = 'http://localhost:8080/rda/datacoll'
 root = '/geofonZone/archive'
-
 
 # def createColl(name, owner: str = 'unknown'):
 #     """Create a collection with the given name.
@@ -83,6 +80,8 @@ def main():
         coll.addmember(Member(location=fullpath))
 
     print(coll.json)
+    for member in coll:
+        print(member.json)
 
 
 if __name__ == '__main__':
