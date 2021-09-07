@@ -32,12 +32,13 @@ import configparser
 # import gnupg
 from pymongo import MongoClient
 from bson.json_util import dumps
-from dcmongo import Collection
-from dcmongo import Collections
-from dcmongo import Member
-from dcmongo import Members
-from dcmongo import DCEncoder
+from datacoll.dcmongo import Collection
+from datacoll.dcmongo import Collections
+from datacoll.dcmongo import Member
+from datacoll.dcmongo import Members
+from datacoll.dcmongo import DCEncoder
 
+# TODO Read from __init__
 version = '0.3a1'
 cfgfile = 'datacoll.cfg'
 
@@ -596,7 +597,11 @@ class MemberAPI(object):
         return ""
 
 
-if __name__ == '__main__':
+def main():
     config = {'/': {'tools.trailing_slash.on': False}}
     cherrypy.server.socket_host = "0.0.0.0"
     cherrypy.quickstart(Application(), script_name='/rda/datacoll', config=config)
+
+
+if __name__ == '__main__':
+    main()
