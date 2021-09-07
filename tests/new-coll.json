@@ -2,7 +2,7 @@
     "pid": "some.pid",
     "name": "some.name",
     "capabilities": {
-        "restrictedToType": "miniSEED"
+        "restrictedToType": "application/vnd.fdsn.mseed"
     },
     "properties": {
         "ownership": "none@gfz-potsdam"

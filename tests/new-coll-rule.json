@@ -3,7 +3,7 @@
     "name": "My rule based coll",
     "rule": "%.name",
     "capabilities": {
-        "restrictedToType": "miniSEED"
+        "restrictedToType": "application/vnd.fdsn.mseed"
     },
     "properties": {
         "ownership": "none@gfz-potsdam"
