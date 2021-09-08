@@ -17,10 +17,8 @@ any later version.
 .. moduleauthor:: Javier Quinteros <javier@gfz-potsdam.de>, GEOFON, GFZ Potsdam
 """
 
-import sys
 import os
 import logging
-import unittest
 import json
 import uuid
 import hashlib
@@ -57,7 +55,8 @@ class DigitalObject(object):
 
 
 class Member(object):
-    def __init__(self, location: str = None, checksum: str = None, datatype: str = None, jsondesc: dict = None):
+    def __init__(self, location: str = None, checksum: str = None, datatype: str = None, jsondesc: dict = None,
+                 futureloc: str = None):
         # Check that a datatype is defined
         if (datatype is None) and (jsondesc is not None) and ('datatype' in jsondesc):
             datatype = jsondesc['datatype']
@@ -65,8 +64,9 @@ class Member(object):
         self.do = DigitalObject(location, checksum, datatype)
 
         self.json = jsondesc if jsondesc is not None else dict()
-        # Copy data from DO
-        self.json['location'] = self.do.uri
+        # Copy data from DO or from the expected location after publication
+        self.json['location'] = self.do.uri if futureloc is None else futureloc
+
         if ('datatype' not in self.json) or (not len(self.json['datatype'])):
             self.json['datatype'] = self.do.mimetype
 
