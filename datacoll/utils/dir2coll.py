@@ -4,6 +4,7 @@ import json
 import os
 import argparse
 import urllib.request as ul
+from urllib.parse import urlparse
 from datacoll.core import Collection
 from datacoll.core import Member
 
@@ -62,8 +63,10 @@ root = '/geofonZone/archive'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', default=os.path.abspath(''),
+    parser.add_argument('-d', '--data', default=os.path.abspath('.'),
                         help='Root directory where the members of the collection are stored')
+    parser.add_argument('-u', '--url', default='http://localhost/',
+                        help='Base of the URL (NOT including the filename) where the files will be publicly available')
     parser.add_argument('-a', '--authentication', default=os.path.expanduser('~/.eidatoken'),
                         help='File containing the token to use during the authentication process')
     parser.add_argument('-V', '--version', action='version', version='%(prog)s ' + version,
@@ -77,7 +80,9 @@ def main():
     # Iterate through files in directory
     for file in os.listdir(args.data):
         fullpath = os.path.join(args.data, file)
-        coll.addmember(Member(location=fullpath))
+        u = urlparse(args.url)
+        u2 = u._replace(path=os.path.join(u.path, coll.json['name'], file))
+        coll.addmember(Member(location=fullpath, futureloc=u2.geturl()))
 
     print(coll.json)
     for member in coll:
