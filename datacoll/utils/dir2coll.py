@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-import json
 import os
 import argparse
-import urllib.request as ul
 from urllib.parse import urlparse
 from datacoll.core import Collection
 from datacoll.core import Member
@@ -75,7 +73,7 @@ def main():
                         help='Controls the verbosity of this script')
     args = parser.parse_args()
 
-    coll = Collection(directory=args.data)
+    coll = Collection(directory=args.data, host=dcUrl)
 
     # Iterate through files in directory
     for file in os.listdir(args.data):
@@ -87,6 +85,8 @@ def main():
     print(coll.json)
     for member in coll:
         print(member.json)
+
+    coll.save()
 
 
 if __name__ == '__main__':
