@@ -54,7 +54,7 @@ capabilitiesFixed = {
                       "metadataIsMutable": True,
                       "restrictedToType": "string",
                       "maxLength": -1,
-                      "ruleBasedGeneration": True
+                      "ruleBasedGeneration": False
                     }
 
 """Constructor of the DataColl object."""
@@ -184,7 +184,7 @@ class Application(object):
             "enforcesAccess": False,
             "supportsPagination": False,
             "asynchronousActions": False,
-            "ruleBasedGeneration": True,
+            "ruleBasedGeneration": False,
             "maxExpansionDepth": 4,
             "providesVersioning": False,
             "supportedCollectionOperations": [],

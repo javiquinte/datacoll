@@ -185,31 +185,6 @@ class DataCollTests(unittest.TestCase):
 
         return
 
-    # def test_coll_rule(self):
-    #     """Rule based Collection."""
-    #     collid = createcollection(self.host, 'new-coll.json')
-    #     with open('new-memb.json') as fin:
-    #         memb = json.load(fin)
-    #     memberid = createmember(self.host, collid, 'new-memb.json')
-    #     memb2 = getmember(self.host, collid, memberid)
-    #
-    #     # Check that the ids are the same
-    #     self.assertEqual(memberid, memb2['memberid'], 'IDs differ!')
-    #     # Compare owner with the original one
-    #     msg = 'Location recorded differ with the original one!'
-    #     self.assertEqual(memb['location'], memb2['location'], msg)
-    #
-    #     collruleid = createcollection(self.host, 'new-coll-rule.json')
-    #     membersrule = getmember(self.host, collruleid)
-    #
-    #     # FIXME What else should I check?
-    #     # Probably that there is only one member!
-    #
-    #     deletemember(self.host, collid, memberid)
-    #     deletecollection(self.host, collid)
-    #     deletecollection(self.host, collruleid)
-    #     return
-
     def test_memb_create_query_delete(self):
         """Creation, query and deletion of a Member of a Collection."""
 
