@@ -19,14 +19,15 @@ any later version.
 
 import os
 import logging
-import json
 import uuid
 import hashlib
 import mimetypes
 from urllib.request import Request
 from urllib.request import urlopen
+from urllib.parse import urlparse
 from urllib.error import HTTPError
 from bson.json_util import loads
+from bson.json_util import dumps
 
 # global token
 #
@@ -55,31 +56,101 @@ class DigitalObject(object):
 
 
 class Member(object):
-    def __init__(self, location: str = None, checksum: str = None, datatype: str = None, jsondesc: dict = None,
-                 futureloc: str = None):
-        # Check that a datatype is defined
-        if (datatype is None) and (jsondesc is not None) and ('datatype' in jsondesc):
-            datatype = jsondesc['datatype']
+    def __init__(self, collid: str = None, memberid: str = None, location: str = None, checksum: str = None,
+                 datatype: str = None, jsondesc: dict = None, futureloc: str = None, host: str = None):
+        # DC System that this class should interact with
+        self.host = host
 
-        self.do = DigitalObject(location, checksum, datatype)
+        # If memberid is present the Member should be retrieved from the DC System
+        if (memberid is not None) and (collid is not None):
+            self.__getfromserver(collid, memberid)
+            return
 
+        # If there is a JSON description use it
         self.json = jsondesc if jsondesc is not None else dict()
-        # Copy data from DO or from the expected location after publication
-        self.json['location'] = self.do.uri if futureloc is None else futureloc
 
-        if ('datatype' not in self.json) or (not len(self.json['datatype'])):
-            self.json['datatype'] = self.do.mimetype
+        # If needed create mandatory entries in the JSON structure and copy from parameters
+        if 'location' not in self.json:
+            self.json['location'] = location if location is not None else ''
+        if 'checksum' not in self.json:
+            self.json['checksum'] = checksum if checksum is not None else ''
+        if 'datatype' not in self.json:
+            self.json['datatype'] = datatype if datatype is not None else ''
 
-        # Copy checksum from DO
-        if ('checksum' not in self.json) or (not len(self.json['checksum'])):
-            self.json['checksum'] = self.do.checksum
+        u = urlparse(self.json['location'])
+        if (not u.scheme) and (not u.netloc) and os.path.isfile(self.json['location']):
+            do = DigitalObject(location, checksum, datatype)
+
+            # Copy data from DO or from the expected location after publication
+            self.json['location'] = do.uri if futureloc is None else futureloc
+
+            if not len(self.json['datatype']):
+                self.json['datatype'] = do.mimetype
+
+            if not len(self.json['checksum']):
+                self.json['checksum'] = do.checksum
+
+            return
 
         # if ('pid' not in self.json) or (not len(self.json['pid'])):
         #     self.json['pid'] = str(uuid.uuid4())
 
+    def __getfromserver(self, collid: str, memberid: str):
+        # Check collid
+        if (collid is None) or (not len(collid)):
+            logging.error('collid must be valid and existing ID (%s)' % collid)
+            raise Exception('collid must be valid and existing ID')
+
+        # Check memberid
+        if (memberid is None) or (not len(memberid)):
+            logging.error('memberid must be valid and existing ID (%s)' % memberid)
+            raise Exception('memberid must be valid and existing ID')
+
+        # Query the member to check it has been properly created
+        req = Request('%s/collections/%s/members/%s' % (self.host, collid, memberid))
+        # req.add_header("Authorization", "Bearer %s" % token)
+
+        u = urlopen(req)
+        memb = loads(u.read())
+        # Check that error code is 200
+        if u.getcode() == 200:
+            self.json = memb
+            return
+
+        raise Exception('Error retrieving member (%s).' % memberid)
+
+    def save(self, collid: str):
+        # If this is a new Member
+        if '_id' not in self.json:
+            req = Request('%s/collections/%s/members' %
+                          (self.host, collid), data=dumps(self.json).encode())
+            req.add_header("Content-Type", 'application/json')
+            # Create a member
+            try:
+                u = urlopen(req)
+                return loads(u.read())
+            except Exception as e:
+                return {'message': 'Error creating member'}
+        else:
+            # Update not yet implemented!
+            logging.error('Update not yet implemented!')
+            raise Exception('Update not yet implemented!')
+
 
 class Collection(object):
-    def __init__(self, name: str = None, owner: str = None, jsondesc: dict = None, directory: str = None):
+    def __init__(self, collid: str = None, name: str = None, owner: str = None, jsondesc: dict = None,
+                 directory: str = None, host: str = None):
+        # Define the list of members in the Collection
+        self.__members = list()
+
+        # DC System that this class should interact with
+        self.host = host
+
+        # If collid is present the Collection should be retrieved from the DC System
+        if collid is not None:
+            self.__getfromserver(collid)
+            return
+
         # Check that an owner is defined Priority is parameter, json, default owner
         if owner is not None:
             pass
@@ -103,11 +174,11 @@ class Collection(object):
         if 'properties' not in self.json:
             self.json['properties'] = dict()
         self.json['properties']['ownership'] = owner
+        if 'capabilities' not in self.json:
+            self.json['capabilities'] = dict()
 
         if ('pid' not in self.json) or (not len(self.json['pid'])):
             self.json['pid'] = str(uuid.uuid4())
-
-        self.__members = list()
 
         if directory is not None:
             logging.info('Scanning directory %s' % directory)
@@ -121,7 +192,71 @@ class Collection(object):
     def addmember(self, member: Member):
         if not isinstance(member, (Member, Collection)):
             raise Exception('A member can only be of type Member or Collection')
+
+        # Use the same host as the Collection
+        member.host = self.host
         self.__members.append(member)
+
+    def __getfromserver(self, collid: str):
+        # Query the collection to check it has been properly created
+        if (collid is None) or (not len(collid)):
+            logging.error('collid must be valid and existing ID (%s)' % collid)
+            raise Exception('collid must be valid and existing ID')
+
+        # Request the collection
+        req = Request('%s/collections/%s' % (self.host, str(collid)))
+        # req.add_header("Authorization", "Bearer %s" % token)
+
+        u = urlopen(req)
+        coll = loads(u.read())
+        # Check that error code is 200
+        if u.getcode() == 200:
+            self.json = coll
+
+            # Retrieve also the members
+            # Query the member to check it has been properly created
+            req = Request('%s/collections/%s/members/' % (self.host, collid))
+            u = urlopen(req)
+            members = loads(u.read())
+            # Check that error code is 200
+            if u.getcode() == 200:
+                for m in members:
+                    self.addmember(Member(host=self.host, jsondesc=m))
+
+            return
+
+        raise Exception('Error retrieving collection %s.' % collid)
+
+    def save(self):
+        # If this is a new Collection
+        if '_id' not in self.json:
+            # First check that all members have a proper location
+            for m in self:
+                if 'location' in m.json:
+                    u = urlparse(m.json['location'])
+                    if not u.scheme or not u.netloc:
+                        logging.error('Member %s does not have a proper location (%s)' % (m, m.json['location']))
+                        raise Exception('Wrong location %s' % m.json['location'])
+                elif isinstance(m, Member):
+                    logging.error('Member without location %s' % m)
+                    raise Exception('Member without location')
+
+            # Create a collection
+            req = Request('%s/collections' % self.host, data=dumps(self.json).encode())
+            req.add_header("Content-Type", 'application/json')
+            try:
+                u = urlopen(req)
+                coll = loads(u.read())
+            except Exception as e:
+                return {'message': 'Error creating collection'}
+
+            for m in self:
+                print(coll['_id'])
+                m.save(coll['_id'])
+        else:
+            # Update not yet implemented!
+            logging.error('Update not yet implemented!')
+            raise Exception('Update not yet implemented!')
 
 
 # TODO Check this!
